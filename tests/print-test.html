@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Teste automatizado de impressão</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <style id="estilo-pagina"></style>
+  <style>@media screen { #area-impressao { display: block; } }</style>
+</head>
+<body>
+  <!--
+    Página usada apenas pelos testes (tests/print-tests.js).
+    Parâmetros: ?q=quantidade&modo=fileira|continuo&codigo=...&nome=...
+  -->
+  <div id="area-impressao"></div>
+  <pre id="resultado"></pre>
+  <script src="../js/layout.js"></script>
+  <script src="../js/barcode.js"></script>
+  <script src="../js/render.js"></script>
+  <script>
+    (function () {
+      const p = new URLSearchParams(location.search);
+      const q = parseInt(p.get('q') || '1', 10);
+      const cfg = EtqLayout.sanitizarConfig({ modoPagina: p.get('modo') || 'fileira' });
+      const produto = {
+        id: 't',
+        nome: p.get('nome') || 'Produto de teste',
+        precoCentavos: parseInt(p.get('preco') || '1290', 10),
+        codigo: p.has('codigo') ? p.get('codigo') : '7891234567895',
+        quantidade: q,
+      };
+      const area = document.getElementById('area-impressao');
+      const { fileiras, totalEtiquetas } = EtqLayout.montarFileiras([produto], cfg);
+      EtqRender.renderizarFolhas(area, fileiras, cfg);
+      const pag = EtqRender.aplicarEstiloPagina(cfg, fileiras.length);
+
+      const pxParaMm = (px) => Math.round((px * 25.4 / 96) * 100) / 100;
+      const dentro = (a, b) => a.left >= b.left - 0.5 && a.right <= b.right + 0.5 && a.top >= b.top - 0.5 && a.bottom <= b.bottom + 0.5;
+      const sobrepoe = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+
+      const folhas = [...area.querySelectorAll('.folha')];
+      const etiquetas = [...area.querySelectorAll('.etiqueta[data-indice]')];
+      const indices = etiquetas.map((e) => Number(e.dataset.indice));
+      const problemas = [];
+
+      etiquetas.forEach((e) => {
+        const r = e.getBoundingClientRect();
+        if (Math.abs(pxParaMm(r.width) - 33) > 0.02 || Math.abs(pxParaMm(r.height) - 21) > 0.02) {
+          problemas.push(`etiqueta ${e.dataset.indice} mede ${pxParaMm(r.width)} x ${pxParaMm(r.height)} mm`);
+        }
+        const caixaNome = e.querySelector('.etq-nome').getBoundingClientRect();
+        const textoNome = e.querySelector('.etq-nome-texto').getBoundingClientRect();
+        const nome = { left: textoNome.left, right: textoNome.right, top: Math.max(textoNome.top, caixaNome.top), bottom: Math.min(textoNome.bottom, caixaNome.bottom) };
+        const preco = e.querySelector('.etq-preco').getBoundingClientRect();
+        const cod = e.querySelector('.etq-codigo');
+        const partes = { nome, preco };
+        if (cod) partes.codigo = cod.getBoundingClientRect();
+        for (const [n, ret] of Object.entries(partes)) if (!dentro(ret, r)) problemas.push(`${n} sai da etiqueta ${e.dataset.indice}`);
+        const nomes = Object.keys(partes);
+        for (let i = 0; i < nomes.length; i++)
+          for (let j = i + 1; j < nomes.length; j++)
+            if (sobrepoe(partes[nomes[i]], partes[nomes[j]])) problemas.push(`${nomes[i]} sobrepõe ${nomes[j]} na etiqueta ${e.dataset.indice}`);
+        if (e.querySelector('.etq-nome-texto').scrollWidth > e.querySelector('.etq-nome-texto').clientWidth + 1) problemas.push('nome estoura a largura');
+      });
+
+      document.getElementById('resultado').textContent = 'RESULTADO:' + JSON.stringify({
+        quantidade: q,
+        totalEtiquetas,
+        etiquetasNoDom: etiquetas.length,
+        indicesUnicos: new Set(indices).size,
+        indicesSequenciais: indices.every((v, i) => v === i),
+        fileiras: fileiras.length,
+        fileirasNoDom: area.querySelectorAll('.fileira').length,
+        posicoesVazias: area.querySelectorAll('.etiqueta.vazia').length,
+        folhas: folhas.length,
+        folhaMm: folhas.map((f) => [pxParaMm(f.getBoundingClientRect().width), pxParaMm(f.getBoundingClientRect().height)]),
+        paginaEsperada: pag,
+        temCodigo: !!area.querySelector('.etq-codigo svg'),
+        problemas,
+      }) + ':FIM';
+    })();
+  </script>
+</body>
+</html>

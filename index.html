@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Etiquetas 33 × 21 mm</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style id="estilo-pagina">@page { size: 103mm 21mm; margin: 0; }</style>
+</head>
+<body>
+  <header class="topo">
+    <h1>Etiquetas de produtos · 33 × 21 mm</h1>
+    <p>Bobina de 3 colunas · 4BARCODE 4B-2054N / Tomate MDK-2054N</p>
+  </header>
+
+  <div id="aviso-armazenamento" class="aviso-armazenamento" hidden>
+    Não foi possível salvar no armazenamento do navegador. Os produtos ficarão disponíveis apenas enquanto esta página estiver aberta.
+  </div>
+
+  <main class="conteudo">
+    <div class="coluna">
+      <!-- Cadastro -->
+      <section class="cartao" aria-labelledby="titulo-form">
+        <h2 id="titulo-form">Cadastrar produto</h2>
+        <form id="form-produto" novalidate autocomplete="off">
+          <div class="campo">
+            <label for="campo-nome">Nome do produto</label>
+            <input type="text" id="campo-nome" maxlength="120" required>
+            <span class="erro" data-erro="nome"></span>
+          </div>
+          <div class="linha-campos">
+            <div class="campo">
+              <label for="campo-preco">Preço</label>
+              <div class="prefixo"><span>R$</span><input type="text" id="campo-preco" inputmode="decimal" placeholder="0,00" required></div>
+              <span class="erro" data-erro="preco"></span>
+            </div>
+            <div class="campo">
+              <label for="campo-quantidade">Quantidade de etiquetas</label>
+              <input type="number" id="campo-quantidade" min="1" max="9999" step="1" inputmode="numeric" required>
+              <span class="erro" data-erro="quantidade"></span>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="campo-codigo">Código de barras <span class="dica">(opcional)</span></label>
+            <input type="text" id="campo-codigo" maxlength="24" inputmode="text" spellcheck="false">
+            <span class="dica" id="dica-codigo">EAN-13 e UPC-A são reconhecidos automaticamente; outros códigos usam Code 128.</span>
+            <span class="erro" data-erro="codigo"></span>
+          </div>
+          <div class="botoes">
+            <button type="submit" class="primario" id="botao-adicionar">Adicionar produto</button>
+            <button type="button" id="botao-limpar">Limpar</button>
+            <button type="button" class="destaque" id="botao-imprimir">Imprimir etiquetas</button>
+          </div>
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <!-- Calibração -->
+      <section class="cartao" aria-labelledby="titulo-calibracao">
+        <h2 id="titulo-calibracao">Teste e calibração</h2>
+        <div class="instrucoes">
+          <ol>
+            <li>No driver da impressora, crie um papel com o tamanho indicado em “Papel a configurar no driver”.</li>
+            <li>Imprima uma etiqueta de teste. Ela tem um contorno exato de 33 × 21 mm e uma cruz no centro.</li>
+            <li>Compare o contorno com a etiqueta física e corrija em “Deslocamento” e “Espaço entre colunas”.</li>
+            <li>Repita até o contorno coincidir. Só então imprima grandes quantidades.</li>
+          </ol>
+        </div>
+        <div class="linha-campos">
+          <div class="campo">
+            <label for="cfg-colunaTeste">Coluna da etiqueta de teste</label>
+            <select id="cfg-colunaTeste" data-cfg="colunaTeste">
+              <option value="1">Coluna 1 (esquerda)</option>
+              <option value="2">Coluna 2 (centro)</option>
+              <option value="3">Coluna 3 (direita)</option>
+            </select>
+          </div>
+        </div>
+        <div class="botoes">
+          <button type="button" id="botao-teste-unico">Imprimir 1 etiqueta de teste</button>
+          <button type="button" id="botao-teste-fileira">Imprimir fileira de teste (3)</button>
+        </div>
+        <p class="dica">Calibração física: só pode ser confirmada imprimindo na sua impressora. Os valores padrão são um ponto de partida, não uma calibração.</p>
+      </section>
+
+      <!-- Configurações -->
+      <section class="cartao" aria-labelledby="titulo-config">
+        <h2 id="titulo-config">Ajustes de impressão <button type="button" class="pequeno" id="botao-restaurar">Restaurar padrões</button></h2>
+
+        <h3>Papel e posição</h3>
+        <div class="grade-config">
+          <div class="campo inteira">
+            <label for="cfg-modoPagina">Modo de página</label>
+            <select id="cfg-modoPagina" data-cfg="modoPagina">
+              <option value="fileira">Uma página por fileira (recomendado, usa o sensor de gap)</option>
+              <option value="continuo">Página contínua (todas as fileiras em uma página)</option>
+            </select>
+          </div>
+          <div class="campo"><label for="cfg-margemEsquerda">Margem esquerda (mm)</label><input type="number" id="cfg-margemEsquerda" data-cfg="margemEsquerda" step="0.1"></div>
+          <div class="campo"><label for="cfg-margemDireita">Margem direita (mm)</label><input type="number" id="cfg-margemDireita" data-cfg="margemDireita" step="0.1"></div>
+          <div class="campo"><label for="cfg-margemSuperior">Margem superior (mm)</label><input type="number" id="cfg-margemSuperior" data-cfg="margemSuperior" step="0.1"></div>
+          <div class="campo"><label for="cfg-margemInferior">Margem inferior (mm)</label><input type="number" id="cfg-margemInferior" data-cfg="margemInferior" step="0.1"></div>
+          <div class="campo"><label for="cfg-espacoHorizontal">Espaço entre colunas (mm)</label><input type="number" id="cfg-espacoHorizontal" data-cfg="espacoHorizontal" step="0.1"></div>
+          <div class="campo"><label for="cfg-espacoVertical">Espaço entre fileiras (mm)</label><input type="number" id="cfg-espacoVertical" data-cfg="espacoVertical" step="0.1"><span class="dica">Só no modo contínuo.</span></div>
+          <div class="campo"><label for="cfg-deslocX">Deslocamento horizontal (mm)</label><input type="number" id="cfg-deslocX" data-cfg="deslocX" step="0.1"><span class="dica">Negativo = esquerda.</span></div>
+          <div class="campo"><label for="cfg-deslocY">Deslocamento vertical (mm)</label><input type="number" id="cfg-deslocY" data-cfg="deslocY" step="0.1"><span class="dica">Negativo = para cima.</span></div>
+        </div>
+        <label class="caixa-marcar"><input type="checkbox" id="cfg-novaFileiraPorProduto" data-cfg="novaFileiraPorProduto"> Começar cada produto em uma nova fileira</label>
+
+        <div class="papel-calculado" aria-live="polite">
+          Papel a configurar no driver: <strong id="papel-tamanho">—</strong>
+          <span id="papel-detalhe" class="dica"></span>
+          <span id="papel-alerta" class="alerta-largura"></span>
+        </div>
+
+        <h3>Conteúdo da etiqueta</h3>
+        <div class="grade-config">
+          <div class="campo"><label for="cfg-fonteNome">Tamanho máx. do nome (pt)</label><input type="number" id="cfg-fonteNome" data-cfg="fonteNome" step="0.5"></div>
+          <div class="campo"><label for="cfg-fontePreco">Tamanho do preço (pt)</label><input type="number" id="cfg-fontePreco" data-cfg="fontePreco" step="0.5"></div>
+          <div class="campo"><label for="cfg-alturaCodigo">Altura do código de barras (mm)</label><input type="number" id="cfg-alturaCodigo" data-cfg="alturaCodigo" step="0.5"></div>
+          <div class="campo"><label for="cfg-larguraCodigo">Largura máx. do código (%)</label><input type="number" id="cfg-larguraCodigo" data-cfg="larguraCodigo" step="5"></div>
+          <div class="campo"><label for="cfg-margemInterna">Margem interna da etiqueta (mm)</label><input type="number" id="cfg-margemInterna" data-cfg="margemInterna" step="0.1"></div>
+          <div class="campo">
+            <label for="cfg-alinhamentoTexto">Alinhamento do texto</label>
+            <select id="cfg-alinhamentoTexto" data-cfg="alinhamentoTexto">
+              <option value="center">Centralizado</option>
+              <option value="left">À esquerda</option>
+            </select>
+          </div>
+        </div>
+        <label class="caixa-marcar"><input type="checkbox" id="cfg-mostrarDigitos" data-cfg="mostrarDigitos"> Mostrar os números abaixo do código de barras</label>
+        <p class="dica">O nome é reduzido automaticamente até caber; o preço também é reduzido se não couber na largura.</p>
+      </section>
+    </div>
+
+    <div class="coluna">
+      <!-- Lista -->
+      <section class="cartao" aria-labelledby="titulo-lista">
+        <h2 id="titulo-lista">Produtos cadastrados</h2>
+        <div class="barra-lista">
+          <div class="escopo" role="radiogroup" aria-label="O que imprimir">
+            <label><input type="radio" name="escopo" value="todos"> Imprimir todas as etiquetas</label>
+            <label><input type="radio" name="escopo" value="selecionados"> Somente produtos selecionados</label>
+          </div>
+          <button type="button" class="pequeno perigo" id="botao-remover-todos">Remover todos</button>
+        </div>
+        <div class="tabela-envoltorio">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col"><input type="checkbox" id="selecionar-todos" aria-label="Selecionar todos"></th>
+                <th scope="col">Produto</th>
+                <th scope="col" class="num">Preço</th>
+                <th scope="col">Código</th>
+                <th scope="col" class="num">Qtd.</th>
+                <th scope="col" class="num">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-produtos"></tbody>
+          </table>
+          <div id="lista-vazia" class="vazio-lista">Nenhum produto cadastrado. Use o formulário ao lado para adicionar.</div>
+        </div>
+        <div class="totais" id="totais"></div>
+      </section>
+
+      <!-- Prévia -->
+      <section class="cartao" aria-labelledby="titulo-previa">
+        <h2 id="titulo-previa">Prévia da impressão</h2>
+        <div class="barra-previa">
+          <div class="resumo-previa" id="resumo-previa"></div>
+          <label class="zoom">Zoom
+            <select id="cfg-zoom" data-cfg="zoom">
+              <option value="1">100%</option>
+              <option value="1.5">150%</option>
+              <option value="2">200%</option>
+              <option value="3">300%</option>
+              <option value="4">400%</option>
+            </select>
+          </label>
+        </div>
+        <div class="palco-previa">
+          <div class="escala-previa" id="previa"></div>
+        </div>
+        <p class="nota-previa" id="nota-previa"></p>
+        <div class="alerta">
+          <p><strong>Importante:</strong> a prévia usa as dimensões reais em milímetros, mas o resultado físico também depende do navegador e do driver da impressora.</p>
+          <ul>
+            <li>Na janela de impressão: escala <strong>100%</strong> (ou “Tamanho real”), margens <strong>Nenhuma</strong> e <strong>cabeçalhos e rodapés desativados</strong>.</li>
+            <li>No driver: tamanho do papel igual ao indicado em “Papel a configurar no driver”, sem “ajustar à página”.</li>
+            <li>Escala, margens ou tamanho de papel diferentes no driver deslocam ou reduzem a impressão.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="dialogo-impressao" aria-labelledby="dialogo-titulo">
+    <div class="dialogo-corpo">
+      <h2 id="dialogo-titulo">Confirmar impressão</h2>
+      <p class="resumo" id="dialogo-resumo"></p>
+      <div class="alerta">
+        <p><strong>Antes de clicar em “Imprimir” na janela do navegador, confira:</strong></p>
+        <ul>
+          <li>Impressora: 4BARCODE 4B-2054N / Tomate MDK-2054N.</li>
+          <li>Tamanho do papel no driver: <strong id="dialogo-papel"></strong>.</li>
+          <li>Escala 100% / “Tamanho real” — nunca “Ajustar à página”.</li>
+          <li>Margens: Nenhuma. Cabeçalhos e rodapés: desativados.</li>
+        </ul>
+        <p>Se ainda não calibrou, imprima antes uma etiqueta de teste.</p>
+      </div>
+    </div>
+    <div class="dialogo-rodape">
+      <button type="button" id="dialogo-cancelar">Cancelar</button>
+      <button type="button" class="destaque" id="dialogo-confirmar">Abrir janela de impressão</button>
+    </div>
+  </dialog>
+
+  <div id="area-impressao" aria-hidden="true"></div>
+
+  <script src="js/layout.js"></script>
+  <script src="js/barcode.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
