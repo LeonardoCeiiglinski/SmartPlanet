@@ -205,9 +205,9 @@
       const folha = div('folha');
       folha.style.width = mm(pag.largura);
       folha.style.height = mm(pag.altura);
-      folha.style.padding =
-        `${mm(cfg.margemSuperior)} ${mm(cfg.margemDireita)} ${mm(cfg.margemInferior)} ${mm(cfg.margemEsquerda)}`;
       const conteudo = div('folha-conteudo');
+      conteudo.style.left = mm((cfg.larguraPagina - L.larguraBloco(cfg)) / 2);
+      conteudo.style.top = mm(cfg.margemSuperior);
       conteudo.style.rowGap = mm(cfg.espacoVertical);
       if (cfg.deslocX || cfg.deslocY) conteudo.style.transform = `translate(${mm(cfg.deslocX)}, ${mm(cfg.deslocY)})`;
       for (const fileira of grupo) {

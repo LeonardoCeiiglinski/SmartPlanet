@@ -4,10 +4,11 @@
   const L = window.EtqLayout;
   const B = window.EtqBarcode;
   const R = window.EtqRender;
+  const T = window.EtqTspl;
 
   const CHAVES = {
     produtos: 'etiquetas33x21.produtos.v1',
-    config: 'etiquetas33x21.config.v1',
+    config: 'etiquetas33x21.config.v2',
     escopo: 'etiquetas33x21.escopo.v1',
   };
   const MAX_FILEIRAS_PREVIA = 60;
@@ -367,8 +368,24 @@
       return;
     }
 
-    const r = R.renderizarFolhas(previa, fileiras, cfg, { maxFileiras: MAX_FILEIRAS_PREVIA });
-    const pag = L.tamanhoPagina(cfg, fileiras.length);
+    let r;
+    let pag;
+    if (cfg.metodo === 'direto') {
+      pag = L.tamanhoPagina({ ...cfg, modoPagina: 'fileira' }, fileiras.length);
+      previa.textContent = '';
+      const visiveis = fileiras.slice(0, MAX_FILEIRAS_PREVIA);
+      for (const fileira of visiveis) {
+        const canvas = T.canvasPrevia(fileira, cfg);
+        canvas.className = 'folha-bitmap';
+        canvas.style.width = `${pag.largura}mm`;
+        canvas.style.height = `${pag.altura}mm`;
+        previa.appendChild(canvas);
+      }
+      r = { fileirasOcultas: fileiras.length - visiveis.length };
+    } else {
+      r = R.renderizarFolhas(previa, fileiras, cfg, { maxFileiras: MAX_FILEIRAS_PREVIA });
+      pag = L.tamanhoPagina(cfg, fileiras.length);
+    }
     resumo.append(
       el('strong', null, plural(totalEtiquetas, 'etiqueta', 'etiquetas')),
       ` · ${plural(fileiras.length, 'fileira', 'fileiras')} · ${plural(pag.paginas, 'página', 'páginas')} de ${fmtMm(pag.largura)} × ${fmtMm(pag.altura)} mm`
@@ -409,6 +426,9 @@
     if (pag.largura > L.LARGURA_MAX_IMPRESSAO) {
       alertas.push(`A largura passa de ${L.LARGURA_MAX_IMPRESSAO} mm, a largura máxima de impressão da 4B-2054N; a parte da direita pode não sair.`);
     }
+    if (L.larguraBloco(estado.config) - pag.largura > 2 * estado.config.margemInterna) {
+      alertas.push('As colunas são mais largas que a página: o conteúdo das bordas será cortado.');
+    }
     if (estado.config.modoPagina === 'continuo' && pag.altura > L.ALTURA_MAX_CONTINUO) {
       alertas.push('Página contínua muito longa; use o modo “Uma página por fileira”.');
     }
@@ -444,10 +464,81 @@
   }
 
   function imprimirFileiras(fileiras) {
+    if (estado.config.metodo === 'direto') {
+      enviarDireto(() => T.gerarTrabalho(fileiras, estado.config), `${plural(fileiras.length, 'fileira enviada', 'fileiras enviadas')} à impressora.`);
+      return;
+    }
     prepararImpressao(fileiras);
     // A janela do navegador exige a confirmação do usuário antes de enviar à impressora.
     setTimeout(() => window.print(), 60);
   }
+
+  function mensagemErroUsb(e) {
+    if (e && e.name === 'NotFoundError') return 'Nenhuma impressora foi escolhida na lista.';
+    if (e && e.name === 'SecurityError') return 'O navegador bloqueou o acesso USB. Abra o aplicativo pelo endereço https do GitHub Pages ou como arquivo local no Chrome/Edge.';
+    return (e && e.message) || 'Falha ao comunicar com a impressora.';
+  }
+
+  async function enviarDireto(gerar, sucesso) {
+    try {
+      const trabalho = gerar();
+      const bytes = trabalho.bytes || trabalho;
+      status('Enviando para a impressora…');
+      await T.enviar(bytes);
+      status(sucesso);
+    } catch (e) {
+      status(mensagemErroUsb(e), true);
+    }
+    atualizarConexao();
+  }
+
+  function atualizarConexao() {
+    const nome = T.nomeConectado();
+    const alvo = $('#status-conexao');
+    alvo.textContent = nome ? `conectada (${nome})` : T.usbDisponivel() ? 'não conectada' : 'navegador sem acesso USB (use Chrome ou Edge)';
+    alvo.classList.toggle('ok', !!nome);
+  }
+
+  function aplicarMetodo() {
+    for (const bloco of $$('[data-metodo]')) bloco.hidden = bloco.dataset.metodo !== estado.config.metodo;
+    $('#dialogo-confirmar').textContent = estado.config.metodo === 'direto' ? 'Imprimir agora' : 'Abrir janela de impressão';
+  }
+
+  $('#botao-conectar').addEventListener('click', async () => {
+    try {
+      await T.conectar(true);
+      status('Impressora conectada.');
+    } catch (e) {
+      status(mensagemErroUsb(e), true);
+    }
+    atualizarConexao();
+  });
+
+  $('#botao-calibrar-sensor').addEventListener('click', () => {
+    enviarDireto(T.comandoCalibrar, 'Calibração do sensor enviada: a impressora avança algumas etiquetas para medir o gap.');
+  });
+
+  $('#botao-avancar').addEventListener('click', () => {
+    enviarDireto(() => T.comandoAvancar(estado.config), 'Avançou uma fileira.');
+  });
+
+  $('#botao-baixar-prn').addEventListener('click', () => {
+    const { fileiras, totalEtiquetas } = L.montarFileiras(produtosDoEscopo(), estado.config);
+    if (!totalEtiquetas) {
+      status('Cadastre ou selecione produtos antes de gerar o arquivo.', true);
+      return;
+    }
+    const { bytes } = T.gerarTrabalho(fileiras, estado.config);
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'etiquetas.prn';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    status(`Arquivo etiquetas.prn gerado com ${plural(totalEtiquetas, 'etiqueta', 'etiquetas')}. Veja no LEIA-ME como enviá-lo à impressora.`);
+  });
 
   $('#botao-imprimir').addEventListener('click', () => {
     const cfg = estado.config;
@@ -464,6 +555,8 @@
       `(${escopo}), em ${plural(pag.paginas, 'página', 'páginas')}.` +
       (vazias ? ` ${plural(vazias, 'posição ficará', 'posições ficarão')} em branco.` : '');
     $('#dialogo-papel').textContent = `${fmtMm(pag.largura)} × ${fmtMm(pag.altura)} mm`;
+    const pagDireta = L.tamanhoPagina({ ...cfg, modoPagina: 'fileira' }, 1);
+    $('#dialogo-size').textContent = `${fmtMm(pagDireta.largura)} × ${fmtMm(pagDireta.altura)} mm`;
     estado.fileirasPendentes = fileiras;
     $('#dialogo-impressao').showModal();
   });
@@ -501,12 +594,18 @@
   /* ---------- Início ---------- */
 
   function renderizarTudo() {
+    aplicarMetodo();
     renderizarLista();
     renderizarPrevia();
     atualizarPapel();
   }
 
   preencherConfig();
+  atualizarConexao();
+  if (T.usbDisponivel()) {
+    T.conectar(false).then(atualizarConexao, atualizarConexao);
+    navigator.usb.addEventListener('disconnect', () => setTimeout(atualizarConexao, 0));
+  }
   atualizarDicaCodigo();
   renderizarTudo();
 })();

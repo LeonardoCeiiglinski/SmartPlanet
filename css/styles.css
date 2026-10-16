@@ -262,7 +262,12 @@ dialog::backdrop { background: rgba(15, 27, 51, 0.55); }
   overflow: hidden;
   box-sizing: border-box;
 }
-.folha-conteudo { display: flex; flex-direction: column; }
+.folha-conteudo { position: absolute; display: flex; flex-direction: column; }
+.folha-bitmap { display: block; }
+.escala-previa .folha-bitmap { box-shadow: 0 0.3mm 1.2mm rgba(0, 0, 0, 0.25); margin: 0 0 2.2mm; image-rendering: pixelated; }
+.conexao { font-size: 14px; margin: 0 0 10px; }
+.conexao strong.ok { color: var(--sucesso); }
+[data-metodo][hidden] { display: none !important; }
 .fileira { display: flex; flex-direction: row; }
 
 .etiqueta {

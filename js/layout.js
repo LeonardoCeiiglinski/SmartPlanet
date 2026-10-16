@@ -17,11 +17,11 @@
   const LIMITE_QTD = 9999;
 
   const CAMPOS_CONFIG = {
-    margemEsquerda: { tipo: 'numero', padrao: 0, min: 0, max: 20 },
-    margemDireita: { tipo: 'numero', padrao: 0, min: 0, max: 20 },
+    metodo: { tipo: 'opcao', padrao: 'direto', opcoes: ['direto', 'navegador'] },
+    larguraPagina: { tipo: 'numero', padrao: 104, min: 99, max: 120 },
     margemSuperior: { tipo: 'numero', padrao: 0, min: 0, max: 20 },
     margemInferior: { tipo: 'numero', padrao: 0, min: 0, max: 20 },
-    espacoHorizontal: { tipo: 'numero', padrao: 2, min: 0, max: 10 },
+    espacoHorizontal: { tipo: 'numero', padrao: 3, min: 0, max: 10 },
     espacoVertical: { tipo: 'numero', padrao: 3, min: 0, max: 20 },
     deslocX: { tipo: 'numero', padrao: 0, min: -10, max: 10 },
     deslocY: { tipo: 'numero', padrao: 0, min: -10, max: 10 },
@@ -36,6 +36,10 @@
     novaFileiraPorProduto: { tipo: 'booleano', padrao: false },
     colunaTeste: { tipo: 'numero', padrao: 1, min: 1, max: 3, inteiro: true },
     zoom: { tipo: 'numero', padrao: 2, min: 1, max: 4 },
+    tsplVelocidade: { tipo: 'numero', padrao: 3, min: 1, max: 6, inteiro: true },
+    tsplDensidade: { tipo: 'numero', padrao: 8, min: 0, max: 15, inteiro: true },
+    tsplGirar: { tipo: 'booleano', padrao: false },
+    tsplInverter: { tipo: 'booleano', padrao: false },
   };
 
   const arred = (n) => Math.round(n * 100) / 100;
@@ -66,12 +70,25 @@
     return c;
   }
 
+  function larguraBloco(cfg) {
+    return ETIQUETA.colunas * ETIQUETA.largura + (ETIQUETA.colunas - 1) * cfg.espacoHorizontal;
+  }
+
+  /**
+   * Posição horizontal (mm) da borda esquerda de cada coluna dentro da página.
+   * A bobina fica centralizada pelas guias da impressora, então o bloco das
+   * 3 colunas é centralizado na largura da página e depois deslocado.
+   */
+  function posicoesColunas(cfg) {
+    const inicio = (cfg.larguraPagina - larguraBloco(cfg)) / 2 + cfg.deslocX;
+    return Array.from({ length: ETIQUETA.colunas }, (_, i) => arred(inicio + i * (ETIQUETA.largura + cfg.espacoHorizontal)));
+  }
+
   /** Tamanho de cada página (mm) para o total de fileiras informado. */
   function tamanhoPagina(cfg, totalFileiras) {
     const n = Math.max(1, totalFileiras | 0);
-    const { largura, altura, colunas } = ETIQUETA;
-    const larguraPagina =
-      cfg.margemEsquerda + colunas * largura + (colunas - 1) * cfg.espacoHorizontal + cfg.margemDireita;
+    const { altura } = ETIQUETA;
+    const larguraPagina = cfg.larguraPagina;
     if (cfg.modoPagina === 'continuo') {
       return {
         largura: arred(larguraPagina),
@@ -162,6 +179,8 @@
     configPadrao,
     sanitizarConfig,
     tamanhoPagina,
+    larguraBloco,
+    posicoesColunas,
     montarFileiras,
     fileiraUnica,
     fileiraTeste,

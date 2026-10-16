@@ -21,23 +21,45 @@ Recomendado: **Google Chrome** ou **Microsoft Edge**, que respeitam melhor o tam
 2. Clique em **Adicionar produto**. Use **Editar**, **Excluir** e as caixas de seleção na lista.
 3. Escolha **Imprimir todas as etiquetas** ou **Somente produtos selecionados**.
 4. Confira a **Prévia da impressão** (cada fileira tem 3 etiquetas; posições vazias aparecem hachuradas e não são impressas).
-5. Clique em **Imprimir etiquetas**, confira o resumo e clique em **Abrir janela de impressão**. Nada é enviado à impressora até você confirmar na janela do navegador.
+5. Clique em **Imprimir etiquetas**, confira o resumo e confirme (**Imprimir agora** na impressão direta, ou **Abrir janela de impressão** no método pelo navegador). Nada é enviado sem essa confirmação.
 
 Quantidade 3 = 1 fileira, 6 = 2 fileiras, 9 = 3 fileiras, 12 = 4 fileiras. Com quantidade 1, a fileira usa só a primeira coluna.
 
-## Configuração da impressora (fazer uma vez)
+## Impressão direta via USB (recomendada)
 
-O aplicativo mostra em **Ajustes de impressão › Papel a configurar no driver** o tamanho exato da página (padrão: **103 × 21 mm**, ou seja 3 × 33 mm + 2 espaços de 2 mm, uma página por fileira).
+É o método padrão. O app desenha cada fileira ponto a ponto (8 pontos/mm, a resolução da impressora) e envia em **TSPL**, a linguagem da 4B-2054N, junto com o tamanho da etiqueta (`SIZE 104 mm,21 mm`, `GAP 3 mm`). A escala e o papel do driver **não interferem**. Esses problemas de escala e papel são a causa das etiquetas saírem espalhadas por várias fileiras e de muitas fileiras avançarem em branco.
+
+1. Abra o app no **Google Chrome** ou no **Microsoft Edge** (Safari e Firefox não têm acesso USB).
+2. Ligue a impressora pelo USB e clique em **Conectar impressora USB**. Escolha a impressora na lista.
+3. Clique em **Calibrar sensor de etiquetas** (uma vez por bobina): a impressora avança algumas etiquetas para medir o gap.
+4. Clique em **Imprimir fileira de teste (3)** e ajuste o alinhamento (veja “Calibração”).
+5. Imprima normalmente com **Imprimir etiquetas**.
+
+Se sair de cabeça para baixo, marque **Girar 180°**. Se sair tudo preto com o texto em branco, marque **Inverter cores**. Para escurecer ou clarear, mude o **Escurecimento** (0–15).
+
+**macOS:** funciona direto no Chrome/Edge.
+
+**Windows:** o driver da impressora normalmente bloqueia o acesso USB do navegador (aparece a mensagem “O sistema não liberou a impressora”). Nesse caso:
+- use **Baixar arquivo .prn** e envie o arquivo para a impressora sem conversão: compartilhe a impressora (Propriedades › Compartilhamento, nome `Tomate`) e, no Prompt de Comando, rode `copy /b "%USERPROFILE%\Downloads\etiquetas.prn" \\localhost\Tomate`;
+- ou use o método **Pela janela de impressão do navegador** com o driver configurado como explicado abaixo.
+
+No macOS, o arquivo .prn também pode ser enviado pelo Terminal: `lp -d NOME_DA_IMPRESSORA -o raw ~/Downloads/etiquetas.prn` (veja o nome com `lpstat -p`).
+
+> Não use “AnyDesk Printer” nem impressão remota: elas convertem o trabalho em PDF e redimensionam a página.
+
+## Configuração do driver (só para impressão pelo navegador)
+
+O aplicativo mostra em **Ajustes de impressão › Papel a configurar no driver** o tamanho exato da página (padrão: **104 × 21 mm**, uma página por fileira; as 3 colunas de 33 mm com 3 mm de espaço ficam centralizadas). Se o driver continuar com o papel de envio padrão (100 × 150 mm), a impressão sai reduzida e espalhada por várias fileiras, e várias fileiras avançam em branco.
 
 **Windows** (driver 4BARCODE/Seagull ou equivalente):
 1. Configurações › Impressoras › 4B-2054N › Preferências de impressão.
-2. Em Papel/Página, crie um papel novo com **largura 103 mm** e **altura 21 mm** (ou o valor mostrado no app).
+2. Em Papel/Página, crie um papel novo com **largura 104 mm** e **altura 21 mm** (ou o valor mostrado no app).
 3. Tipo de mídia: **etiquetas com gap/espaço** (sensor de gap). Orientação: retrato.
 4. Desative qualquer opção de “ajustar à página”/“escala”.
 
 **macOS**:
 1. Na janela de impressão, em Tamanho do papel, escolha **Gerenciar tamanhos personalizados**.
-2. Crie um tamanho de **103 × 21 mm** com todas as margens (área não imprimível) em **0**.
+2. Crie um tamanho de **104 × 21 mm** com todas as margens (área não imprimível) em **0**.
 
 ## Janela de impressão do navegador
 
@@ -57,8 +79,8 @@ Os valores padrão são um ponto de partida. **A calibração física só é con
 3. Compare com a etiqueta física e ajuste:
    - Tudo deslocado para um lado → **Deslocamento horizontal** (negativo = esquerda).
    - Tudo deslocado para cima/baixo → **Deslocamento vertical** (negativo = para cima).
-   - Colunas 2 e 3 desalinhadas progressivamente → **Espaço entre colunas**.
-   - Bobina com borda lateral antes da 1ª coluna → **Margem esquerda** (aumenta a largura da página; atualize o papel no driver).
+   - Colunas 1 e 3 desalinhadas em sentidos opostos → **Espaço entre colunas** (padrão 3 mm, medido na bobina).
+   - Conteúdo cortado na borda → confira as guias da bobina (devem centralizar o rolo) ou ajuste a **Largura da página**.
 4. Repita até o contorno coincidir com a etiqueta. Depois use **Testar 1** em um produto para conferir o texto.
 
 Outros ajustes: tamanho máximo do nome, tamanho do preço, altura e largura do código de barras, margem interna, alinhamento do texto e números abaixo do código. **Restaurar padrões** volta aos valores iniciais.
@@ -78,6 +100,7 @@ Outros ajustes: tamanho máximo do nome, tamanho do preço, altura e largura do 
 | `js/layout.js` | Dimensões, fileiras, preços e ajustes |
 | `js/render.js` | Desenho das etiquetas em milímetros e ajuste automático do texto |
 | `js/barcode.js` | Gerador de EAN-13, UPC-A e Code 128 (sem dependências) |
+| `js/tspl.js` | Impressão direta: bitmap de 203 dpi, comandos TSPL e conexão USB |
 | `tests/` | Testes automatizados (opcionais, exigem Node.js) |
 
 ## Testes automatizados (opcional)

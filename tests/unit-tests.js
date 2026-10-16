@@ -151,21 +151,28 @@ teste('opção "nova fileira por produto"', () => {
   assert.strictEqual(r.fileiras[1][0].produto.id, 'q');
   assert.strictEqual(r.totalEtiquetas, 4);
 });
-teste('página por fileira: 3×33 + 2×2 = 103 mm de largura, 21 mm de altura', () => {
+teste('página por fileira: 104 mm (largura da cabeça) × 21 mm', () => {
   const p = L.tamanhoPagina(cfg, 4);
-  assert.deepStrictEqual(p, { largura: 103, altura: 21, paginas: 4 });
+  assert.deepStrictEqual(p, { largura: 104, altura: 21, paginas: 4 });
 });
 teste('página contínua: 4 fileiras = 4×21 + 3×3 = 93 mm', () => {
   const p = L.tamanhoPagina({ ...cfg, modoPagina: 'continuo' }, 4);
-  assert.deepStrictEqual(p, { largura: 103, altura: 93, paginas: 1 });
+  assert.deepStrictEqual(p, { largura: 104, altura: 93, paginas: 1 });
 });
-teste('margens entram no tamanho da página', () => {
-  const p = L.tamanhoPagina({ ...cfg, margemEsquerda: 1.5, margemDireita: 0.5, margemSuperior: 1, espacoHorizontal: 3 }, 1);
-  assert.deepStrictEqual(p, { largura: 107, altura: 22, paginas: 1 });
+teste('margens superior e inferior entram na altura da página', () => {
+  const p = L.tamanhoPagina({ ...cfg, margemSuperior: 1, margemInferior: 0.5 }, 1);
+  assert.deepStrictEqual(p, { largura: 104, altura: 22.5, paginas: 1 });
+});
+teste('colunas centralizadas: bloco 3×33 + 2×3 = 105 mm em 104 mm começa em -0,5 mm', () => {
+  assert.strictEqual(L.larguraBloco(cfg), 105);
+  assert.deepStrictEqual(L.posicoesColunas(cfg), [-0.5, 35.5, 71.5]);
+  assert.deepStrictEqual(L.posicoesColunas({ ...cfg, deslocX: 1 }), [0.5, 36.5, 72.5]);
+  assert.deepStrictEqual(L.posicoesColunas({ ...cfg, espacoHorizontal: 2 }), [0.5, 35.5, 70.5]);
 });
 teste('configuração inválida é corrigida', () => {
-  const c = L.sanitizarConfig({ margemEsquerda: '-5', fontePreco: '999', modoPagina: 'a4', deslocX: '1,5', zoom: 'x' });
-  assert.strictEqual(c.margemEsquerda, 0);
+  const c = L.sanitizarConfig({ larguraPagina: '50', fontePreco: '999', modoPagina: 'a4', deslocX: '1,5', zoom: 'x', metodo: 'fax' });
+  assert.strictEqual(c.larguraPagina, 99);
+  assert.strictEqual(c.metodo, 'direto');
   assert.strictEqual(c.fontePreco, 28);
   assert.strictEqual(c.modoPagina, 'fileira');
   assert.strictEqual(c.deslocX, 1.5);

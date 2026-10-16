@@ -94,12 +94,17 @@ for (const caso of casos) {
   verificar(d.fileiras === fileirasEsperadas && d.fileirasNoDom === fileirasEsperadas, `fileiras ${d.fileirasNoDom} ≠ ${fileirasEsperadas}`);
   verificar(d.posicoesVazias === fileirasEsperadas * 3 - caso.q, 'posições vazias incorretas');
   verificar(d.folhas === paginasEsperadas, `folhas no DOM ${d.folhas} ≠ ${paginasEsperadas}`);
-  verificar(d.folhaMm.every(([w, h]) => Math.abs(w - 103) < 0.05 && Math.abs(h - alturaEsperada) < 0.05), `folha mede ${JSON.stringify(d.folhaMm)}`);
+  verificar(d.folhaMm.every(([w, h]) => Math.abs(w - 104) < 0.05 && Math.abs(h - alturaEsperada) < 0.05), `folha mede ${JSON.stringify(d.folhaMm)}`);
+  verificar(d.colunasMm.every((c) => JSON.stringify(c) === JSON.stringify([-0.5, 35.5, 71.5])), `colunas em ${JSON.stringify(d.colunasMm)}`);
   verificar(d.temCodigo === (caso.codigo !== ''), 'presença do código de barras incorreta');
   verificar(d.problemas.length === 0, d.problemas.join('; '));
+  verificar(d.tspl.size === '104 mm,21 mm' && d.tspl.gap === '3 mm,0 mm', `TSPL SIZE/GAP: ${d.tspl.size} / ${d.tspl.gap}`);
+  verificar(d.tspl.copias === fileirasEsperadas, `TSPL imprime ${d.tspl.copias} fileiras, esperado ${fileirasEsperadas}`);
+  verificar(d.tspl.bitmapsOk, 'bitmap TSPL com tamanho diferente de 832 × 168 pontos');
+  verificar(d.tspl.tintaSoNasEtiquetas, 'TSPL imprime em posição vazia ou deixa etiqueta sem conteúdo');
   verificar(pdf.paginas === paginasEsperadas, `PDF com ${pdf.paginas} páginas, esperado ${paginasEsperadas}`);
-  verificar(Math.abs(pdf.larguraMm - 103) < 0.3 && Math.abs(pdf.alturaMm - alturaEsperada) < 0.3,
-    `página do PDF ${pdf.larguraMm} × ${pdf.alturaMm} mm, esperado 103 × ${alturaEsperada} mm`);
+  verificar(Math.abs(pdf.larguraMm - 104) < 0.3 && Math.abs(pdf.alturaMm - alturaEsperada) < 0.3,
+    `página do PDF ${pdf.larguraMm} × ${pdf.alturaMm} mm, esperado 104 × ${alturaEsperada} mm`);
 }
 
 console.log(`\nPDFs gerados em: ${saida}`);
