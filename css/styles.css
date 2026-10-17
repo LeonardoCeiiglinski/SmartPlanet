@@ -184,6 +184,22 @@ td.acoes button + button { margin-left: 4px; }
 }
 .selo.atencao { background: var(--aviso-fundo); color: #8a5a00; border: 1px solid var(--aviso-borda); }
 .vazio-lista { padding: 22px; text-align: center; color: var(--texto-suave); }
+.resultado-leitura {
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: #f7f8fb;
+  padding: 14px 16px;
+  margin: 4px 0 12px;
+  min-height: 72px;
+  font-size: 15px;
+}
+.resultado-leitura.ok { background: #e8f6ec; border-color: #b7e0c2; }
+.resultado-leitura.nao { background: #fdecea; border-color: #f3b4ae; }
+.resultado-leitura .lido-nome { display: block; font-size: 22px; font-weight: 800; line-height: 1.2; }
+.resultado-leitura .lido-preco { display: block; font-size: 28px; font-weight: 800; margin-top: 2px; }
+.resultado-leitura .lido-extra { display: block; margin-top: 4px; color: var(--texto-suave); font-size: 14px; }
+#campo-leitor { font-size: 18px; letter-spacing: 0.04em; }
+
 .totais { margin-top: 10px; font-size: 14px; color: var(--texto-suave); }
 .totais strong { color: var(--texto); }
 

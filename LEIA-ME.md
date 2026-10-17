@@ -13,6 +13,17 @@ Não precisa de internet, instalação, servidor nem cadastro.
 
 Recomendado: **Google Chrome** ou **Microsoft Edge**, que respeitam melhor o tamanho de página definido pelo aplicativo.
 
+## Registrar ao bipar
+
+A máquina de bipar funciona como um teclado: ela digita o código e aperta Enter. Com a página aberta:
+
+1. Cadastre o produto com o **mesmo código** que está na etiqueta. Sem esse código, a leitura não acha o produto.
+2. Clique no campo **Bipe a etiqueta** (a página já abre com ele selecionado).
+3. Bipe. O nome e o preço aparecem em destaque, soa um bipe e a leitura entra na lista do dia, com o horário.
+4. Se o código não existir, o aplicativo avisa e abre o cadastro com o código já preenchido. Informe nome e preço; a leitura seguinte já registra.
+
+Cada bip conta uma unidade. Os registros ficam salvos neste navegador. Isso registra no aplicativo de etiquetas. O MarketUP não recebe essa leitura: no caixa, bipe no PDV do MarketUP, com o mesmo código cadastrado lá.
+
 ## Uso diário
 
 1. Preencha **Nome do produto**, **Preço**, **Quantidade de etiquetas** e, se houver, o **Código de barras**.

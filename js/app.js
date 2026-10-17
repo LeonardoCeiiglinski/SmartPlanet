@@ -10,6 +10,7 @@
     produtos: 'etiquetas33x21.produtos.v1',
     config: 'etiquetas33x21.config.v2',
     escopo: 'etiquetas33x21.escopo.v1',
+    leituras: 'etiquetas33x21.leituras.v1',
   };
   const MAX_FILEIRAS_PREVIA = 60;
 
@@ -69,9 +70,23 @@
     editandoId: null,
     impressaoPreparada: false,
     fileirasPendentes: null,
+    leituras: sanitizarLeituras(lerArmazenado(CHAVES.leituras, [])),
   };
 
+  function sanitizarLeituras(lista) {
+    if (!Array.isArray(lista)) return [];
+    return lista.filter((l) => l && typeof l.codigo === 'string' && typeof l.nome === 'string' && Number.isInteger(Number(l.precoCentavos)) && typeof l.quando === 'string').map((l) => ({
+      id: typeof l.id === 'string' && l.id ? l.id : novoId(),
+      quando: l.quando,
+      codigo: l.codigo,
+      produtoId: typeof l.produtoId === 'string' ? l.produtoId : '',
+      nome: l.nome,
+      precoCentavos: Number(l.precoCentavos),
+    })).slice(0, 2000);
+  }
+
   const salvarProdutos = () => gravarArmazenado(CHAVES.produtos, estado.produtos);
+  const salvarLeituras = () => gravarArmazenado(CHAVES.leituras, estado.leituras);
   const salvarConfig = () => gravarArmazenado(CHAVES.config, estado.config);
 
   /* ---------- Utilidades ---------- */
@@ -591,10 +606,161 @@
     estado.impressaoPreparada = false;
   });
 
+  /* ---------- Leitor de código de barras ---------- */
+
+  const campoLeitor = $('#campo-leitor');
+  const diaLocal = (data) => {
+    const d = new Date(data);
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  };
+  const ehHoje = (quando) => diaLocal(quando) === diaLocal(new Date());
+  const horaLocal = (quando) => new Date(quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  let audioCtx = null;
+  function bip(ok) {
+    try {
+      audioCtx = audioCtx || new AudioContext();
+      const osc = audioCtx.createOscillator();
+      const ganho = audioCtx.createGain();
+      osc.frequency.value = ok ? 880 : 220;
+      ganho.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      ganho.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+      ganho.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (ok ? 0.12 : 0.28));
+      osc.connect(ganho);
+      ganho.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+      audioCtx.resume();
+    } catch (e) { /* sem áudio */ }
+  }
+
+  function mostrarResultado(tipo, conteudo, extra) {
+    const caixa = $('#resultado-leitura');
+    caixa.className = 'resultado-leitura' + (tipo ? ' ' + tipo : '');
+    caixa.textContent = '';
+    if (tipo === 'ok') {
+      caixa.append(
+        el('span', 'lido-nome', conteudo.nome),
+        el('span', 'lido-preco', L.formatarPreco(conteudo.precoCentavos)),
+        el('span', 'lido-extra', extra)
+      );
+    } else {
+      caixa.textContent = conteudo;
+    }
+  }
+
+  function renderizarLeituras() {
+    const deHoje = estado.leituras.filter((l) => ehHoje(l.quando));
+    const corpo = $('#lista-leituras');
+    corpo.textContent = '';
+    $('#leituras-vazias').hidden = deHoje.length > 0;
+    for (const l of deHoje.slice(0, 50)) {
+      const tr = el('tr');
+      tr.append(
+        el('td', null, horaLocal(l.quando)),
+        el('td', 'nome-produto', l.nome),
+        el('td', 'num', L.formatarPreco(l.precoCentavos)),
+        el('td', 'codigo-produto', l.codigo)
+      );
+      corpo.appendChild(tr);
+    }
+    const unidades = deHoje.length;
+    const produtos = new Set(deHoje.map((l) => l.produtoId || l.codigo)).size;
+    const t = $('#totais-leituras');
+    t.textContent = '';
+    t.append('Hoje: ', el('strong', null, plural(unidades, 'leitura', 'leituras')), ` · ${plural(produtos, 'produto diferente', 'produtos diferentes')}`);
+    $('#botao-limpar-leituras').disabled = unidades === 0;
+  }
+
+  function registrarLeitura(codigoBruto) {
+    const codigo = String(codigoBruto || '').trim();
+    campoLeitor.value = '';
+    if (codigo.length < 3) return;
+    const produto = estado.produtos.find((p) => p.codigo && p.codigo === codigo);
+    if (!produto) {
+      campoCodigo.value = codigo;
+      atualizarDicaCodigo();
+      mostrarResultado('nao', `O código ${codigo} não está cadastrado. Preencha o nome e o preço para registrar esse produto; a próxima leitura já será reconhecida.`);
+      bip(false);
+      campoNome.focus();
+      campoNome.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    estado.leituras.unshift({
+      id: novoId(),
+      quando: new Date().toISOString(),
+      codigo,
+      produtoId: produto.id,
+      nome: produto.nome,
+      precoCentavos: produto.precoCentavos,
+    });
+    if (estado.leituras.length > 2000) estado.leituras.length = 2000;
+    salvarLeituras();
+    const vezes = estado.leituras.filter((l) => ehHoje(l.quando) && l.produtoId === produto.id).length;
+    mostrarResultado('ok', produto, `Registrado às ${horaLocal(estado.leituras[0].quando)} · ${plural(vezes, 'vez hoje', 'vezes hoje')}`);
+    bip(true);
+    renderizarLeituras();
+    campoLeitor.focus();
+  }
+
+  // O leitor envia o código de uma vez, bem mais rápido do que uma pessoa digita.
+  let bufferLeitor = '';
+  let ultimoToque = 0;
+  let rajadaRapida = false;
+  document.addEventListener('keydown', (evento) => {
+    if (evento.ctrlKey || evento.altKey || evento.metaKey || evento.isComposing) return;
+    const agora = performance.now();
+    if (evento.key === 'Enter' || evento.key === 'Tab') {
+      const codigo = bufferLeitor;
+      const foiRajada = rajadaRapida && codigo.length >= 3 && agora - ultimoToque < 250;
+      bufferLeitor = '';
+      rajadaRapida = false;
+      if (foiRajada) {
+        evento.preventDefault();
+        evento.stopPropagation();
+        const alvo = evento.target;
+        if (alvo instanceof HTMLInputElement && alvo !== campoLeitor && alvo.value.endsWith(codigo)) {
+          alvo.value = alvo.value.slice(0, -codigo.length);
+        }
+        registrarLeitura(codigo);
+      }
+      return;
+    }
+    if (evento.key.length !== 1) return;
+    const intervalo = agora - ultimoToque;
+    if (intervalo > 90) {
+      bufferLeitor = '';
+      rajadaRapida = true;
+    } else if (intervalo > 40) {
+      rajadaRapida = false;
+    }
+    bufferLeitor += evento.key;
+    ultimoToque = agora;
+    if (bufferLeitor.length > B.LIMITE) bufferLeitor = bufferLeitor.slice(-B.LIMITE);
+  }, true);
+
+  campoLeitor.addEventListener('keydown', (evento) => {
+    if (evento.key === 'Enter') {
+      evento.preventDefault();
+      if (campoLeitor.value.trim().length >= 3) registrarLeitura(campoLeitor.value);
+    }
+  });
+
+  $('#botao-limpar-leituras').addEventListener('click', () => {
+    const deHoje = estado.leituras.filter((l) => ehHoje(l.quando)).length;
+    if (!deHoje) return;
+    if (!confirm(`Apagar os ${deHoje} registros de leitura de hoje?`)) return;
+    estado.leituras = estado.leituras.filter((l) => !ehHoje(l.quando));
+    salvarLeituras();
+    mostrarResultado('', 'Registros de hoje apagados. Bipe uma etiqueta para registrar o produto.');
+    renderizarLeituras();
+  });
+
   /* ---------- Início ---------- */
 
   function renderizarTudo() {
     aplicarMetodo();
+    renderizarLeituras();
     renderizarLista();
     renderizarPrevia();
     atualizarPapel();
@@ -608,4 +774,5 @@
   }
   atualizarDicaCodigo();
   renderizarTudo();
+  campoLeitor.focus();
 })();

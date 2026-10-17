@@ -41,7 +41,7 @@
             </div>
           </div>
           <div class="campo">
-            <label for="campo-codigo">Código de barras <span class="dica">(opcional)</span></label>
+            <label for="campo-codigo">Código de barras <span class="dica">(necessário para a máquina de bipar reconhecer o produto)</span></label>
             <input type="text" id="campo-codigo" maxlength="24" inputmode="text" spellcheck="false">
             <span class="dica" id="dica-codigo">EAN-13 e UPC-A são reconhecidos automaticamente; outros códigos usam Code 128.</span>
             <span class="erro" data-erro="codigo"></span>
@@ -167,6 +167,35 @@
     </div>
 
     <div class="coluna">
+      <!-- Leitor -->
+      <section class="cartao" aria-labelledby="titulo-leitor">
+        <h2 id="titulo-leitor">Leitor de código de barras</h2>
+        <p class="dica">Deixe esta página aberta no computador ligado à máquina de bipar. Cada leitura registra o produto que tem esse código cadastrado. O produto precisa já estar na lista, com o mesmo código impresso na etiqueta.</p>
+        <div class="campo">
+          <label for="campo-leitor">Bipe a etiqueta</label>
+          <input type="text" id="campo-leitor" autocomplete="off" spellcheck="false" placeholder="Aguardando a máquina de bipar…" inputmode="none">
+        </div>
+        <div id="resultado-leitura" class="resultado-leitura" aria-live="assertive">Bipe uma etiqueta para registrar o produto.</div>
+        <div class="barra-lista">
+          <div class="totais" id="totais-leituras"></div>
+          <button type="button" class="pequeno perigo" id="botao-limpar-leituras">Limpar registros de hoje</button>
+        </div>
+        <div class="tabela-envoltorio">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Horário</th>
+                <th scope="col">Produto</th>
+                <th scope="col" class="num">Preço</th>
+                <th scope="col">Código</th>
+              </tr>
+            </thead>
+            <tbody id="lista-leituras"></tbody>
+          </table>
+          <div id="leituras-vazias" class="vazio-lista">Nenhuma leitura registrada hoje.</div>
+        </div>
+      </section>
+
       <!-- Lista -->
       <section class="cartao" aria-labelledby="titulo-lista">
         <h2 id="titulo-lista">Produtos cadastrados</h2>
