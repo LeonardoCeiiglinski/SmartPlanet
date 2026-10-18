@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  if (window.__labelsPageAbort) window.__labelsPageAbort.abort();
+  const pageAbort = new AbortController();
+  window.__labelsPageAbort = pageAbort;
+  const on = { signal: pageAbort.signal };
+
   const catalog = Array.isArray(window.LABELS_CATALOG) ? window.LABELS_CATALOG : [];
   const prefill = window.LABELS_PREFILL;
   const chave = 'etiquetas33x21.produtos.v1';
@@ -94,13 +99,13 @@
     };
 
     if (busca) {
-      busca.addEventListener('change', usarBusca);
+      busca.addEventListener('change', usarBusca, on);
       busca.addEventListener('keydown', (evento) => {
         if (evento.key === 'Enter') {
           evento.preventDefault();
           usarBusca();
         }
-      });
+      }, on);
     }
 
     if (nova) {
@@ -109,7 +114,7 @@
         const campo = document.getElementById('campo-quantidade');
         if (campo && !dialogo?.open) campo.value = qtd;
         if (adicionar) adicionar.textContent = 'Adicionar ' + qtd + ' à impressão';
-      });
+      }, on);
     }
 
     if (adicionar) {
@@ -126,7 +131,7 @@
         }
         aplicarCatalogo(produto);
         if (form) form.requestSubmit();
-      });
+      }, on);
     }
 
     if (form) {
@@ -145,19 +150,19 @@
             status.classList.add('erro');
           }
         }
-      }, true);
+      }, { capture: true, signal: pageAbort.signal });
     }
 
     if (dialogo) {
       dialogo.addEventListener('click', (evento) => {
         if (evento.target === dialogo) dialogo.close();
-      });
+      }, on);
       dialogo.addEventListener('close', () => {
         if (document.querySelector('#lista-produtos tr.editando')) {
           const limpar = document.getElementById('botao-limpar');
           if (limpar) limpar.click();
         }
-      });
+      }, on);
     }
 
     if (prefill && prefill.nome) {

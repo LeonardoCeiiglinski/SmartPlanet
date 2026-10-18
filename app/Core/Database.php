@@ -28,10 +28,10 @@ final class Database
         if ($url) {
             self::applyUrl($url);
         }
-        $driver = Env::get('DB_DRIVER', Paths::isServerless() ? 'mysql' : 'sqlite');
+        $driver = Env::get('DB_DRIVER', Paths::isServerless() ? 'pgsql' : 'sqlite');
         if ($driver === 'sqlite') {
             if (Paths::isServerless()) {
-                throw new \RuntimeException('Na Vercel use MySQL persistente (PlanetScale, Railway, Aiven, TiDB). SQLite não sobrevive entre requisições.');
+                throw new \RuntimeException('Na Vercel use Postgres (Supabase) ou MySQL persistente. SQLite não sobrevive entre requisições.');
             }
             $database = Env::get('DB_DATABASE', 'storage/app/erp.sqlite') ?? 'storage/app/erp.sqlite';
             $path = self::absolutePath($database);
@@ -57,8 +57,23 @@ final class Database
                 $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
             }
             self::$pdo = new PDO($dsn, Env::require('DB_USERNAME'), Env::get('DB_PASSWORD', '') ?? '', $options);
+        } elseif (in_array($driver, ['pgsql', 'postgres', 'postgresql'], true)) {
+            if (!extension_loaded('pdo_pgsql')) {
+                throw new \RuntimeException('A extensão pdo_pgsql precisa estar habilitada.');
+            }
+            $dsn = sprintf(
+                'pgsql:host=%s;port=%s;dbname=%s',
+                Env::get('DB_HOST', '127.0.0.1'),
+                Env::get('DB_PORT', '5432'),
+                Env::require('DB_DATABASE')
+            );
+            $ssl = Env::get('DB_SSLMODE', Paths::isServerless() ? 'require' : 'prefer');
+            if ($ssl) {
+                $dsn .= ';sslmode=' . $ssl;
+            }
+            self::$pdo = new PDO($dsn, Env::require('DB_USERNAME'), Env::get('DB_PASSWORD', '') ?? '');
         } else {
-            throw new \RuntimeException('DB_DRIVER deve ser mysql ou sqlite.');
+            throw new \RuntimeException('DB_DRIVER deve ser mysql, pgsql ou sqlite.');
         }
 
         self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -100,16 +115,19 @@ final class Database
             throw new \RuntimeException('DATABASE_URL inválida.');
         }
         $scheme = strtolower((string) ($parts['scheme'] ?? 'mysql'));
-        if (!in_array($scheme, ['mysql', 'mariadb', 'mysql2'], true)) {
-            throw new \RuntimeException('Use uma URL MySQL/MariaDB (mysql://usuario:senha@host:3306/banco).');
+        $pgsql = in_array($scheme, ['postgres', 'postgresql', 'pgsql'], true);
+        $mysql = in_array($scheme, ['mysql', 'mariadb', 'mysql2'], true);
+        if (!$pgsql && !$mysql) {
+            throw new \RuntimeException('Use DATABASE_URL Postgres (Supabase) ou MySQL.');
         }
         if (getenv('DB_DRIVER') === false) {
-            putenv('DB_DRIVER=mysql');
-            $_ENV['DB_DRIVER'] = 'mysql';
+            $mapped = $pgsql ? 'pgsql' : 'mysql';
+            putenv('DB_DRIVER=' . $mapped);
+            $_ENV['DB_DRIVER'] = $mapped;
         }
         putenv('DB_HOST=' . $parts['host']);
         $_ENV['DB_HOST'] = $parts['host'];
-        $port = (string) ($parts['port'] ?? 3306);
+        $port = (string) ($parts['port'] ?? ($pgsql ? 5432 : 3306));
         putenv('DB_PORT=' . $port);
         $_ENV['DB_PORT'] = $port;
         $db = ltrim((string) ($parts['path'] ?? ''), '/');

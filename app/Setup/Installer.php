@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Setup;
 
 use App\Core\Database;
+use App\Domain\Finance\FinanceLedger;
 use InvalidArgumentException;
 use PDO;
 use RuntimeException;
@@ -147,6 +148,7 @@ final class Installer
                 'INSERT INTO financial_accounts (company_id, branch_id, name, account_type, active)
                  VALUES (:company, :branch, :name, :type, 1)'
             )->execute(['company' => $companyId, 'branch' => $branchId, 'name' => 'Caixa', 'type' => 'cash']);
+            FinanceLedger::seedCompany($pdo, $companyId);
         });
     }
 }

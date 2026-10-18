@@ -23,5 +23,13 @@ use App\Core\View;
 <div class="table-wrap"><table><thead><tr><th>Produto</th><th class="num">Pedido</th><th class="num">Recebido</th><th>Receber agora</th><th class="num">Custo</th></tr></thead><tbody>
 <?php foreach($order['items'] as $item): $remaining=(float)$item['quantity']-(float)$item['received_quantity']; ?><tr><td><?= View::e($item['internal_code'].' · '.$item['description']) ?></td><td class="num"><?= number_format((float)$item['quantity'],4,',','.') ?></td><td class="num"><?= number_format((float)$item['received_quantity'],4,',','.') ?></td><td><input name="quantities[<?= (int)$item['id'] ?>]" value="<?= number_format(max(0,$remaining),4,'.','') ?>" <?= $remaining<=0?'readonly':'' ?> placeholder="Ex.: 10"></td><td class="num">R$ <?= number_format((float)$item['unit_cost'],2,',','.') ?></td></tr><?php endforeach; ?>
 </tbody></table></div><?php if(!in_array($order['status'],['received','cancelled'],true)): ?><button class="primary">Confirmar recebimento</button><?php endif; ?>
-</form></div></div>
+</form>
+<?php if($order['status']==='ordered'): ?>
+<form method="post" action="/purchases/cancel" class="actions" data-confirm-twice="cancelar" data-confirm-item="<?= View::e($order['order_number']) ?>"><?= Csrf::field() ?>
+  <input type="hidden" name="order_id" value="<?= (int)$order['id'] ?>">
+  <input name="reason" minlength="5" required placeholder="Ex.: Fornecedor cancelou o pedido">
+  <button>Cancelar pedido</button>
+</form>
+<?php endif; ?>
+</div></div>
 <?php endif; ?>

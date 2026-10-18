@@ -7,6 +7,7 @@ namespace App\Domain\Sales;
 use App\Core\Audit;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Domain\Finance\FinanceLedger;
 use PDO;
 
 final class PosService
@@ -72,7 +73,7 @@ final class PosService
                 if ($lineDiscount > 0 && !Auth::can('sales.discount')) {
                     throw new \RuntimeException('Sem permissão para aplicar desconto.');
                 }
-                $stmt = $pdo->prepare('SELECT id,description,sale_price,promotional_price,promotion_starts_at,promotion_ends_at,track_stock FROM products WHERE id=:id AND company_id=:company AND active=1');
+                $stmt = $pdo->prepare('SELECT id,description,sale_price,promotional_price,promotion_starts_at,promotion_ends_at,track_stock,cost_price FROM products WHERE id=:id AND company_id=:company AND active=1');
                 $stmt->execute(['id' => (int) ($item['product_id'] ?? 0), 'company' => $u['company_id']]);
                 $product = $stmt->fetch();
                 if (!$product) {
@@ -126,13 +127,15 @@ final class PosService
             $pdo->prepare('INSERT INTO sales (company_id,branch_id,cash_session_id,customer_id,operator_id,sale_number,status,subtotal,discount_amount,total,idempotency_key,notes,completed_at,created_at,updated_at) VALUES (:company,:branch,:session,:customer,:operator,:number,\'completed\',:subtotal,:discount,:total,:key,:notes,:at,:at,:at)')
                 ->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'session'=>$session['id'],'customer'=>$customerId ?: null,'operator'=>$u['id'],'number'=>$number,'subtotal'=>self::money($subtotal),'discount'=>self::money($discount),'total'=>self::money($total),'key'=>$key,'notes'=>trim($notes) ?: null,'at'=>$now]);
             $saleId = (int) $pdo->lastInsertId();
+            $cogs = 0.0;
             foreach ($normalized as [$line,$product,$qty,$price,$disc,$lineTotal,$barcode]) {
                 $pdo->prepare('INSERT INTO sale_items (sale_id,product_id,barcode,description,quantity,unit_price,discount_amount,subtotal) VALUES (:sale,:product,:barcode,:description,:quantity,:price,:discount,:subtotal)')
                     ->execute(['sale'=>$saleId,'product'=>$product['id'],'barcode'=>$barcode,'description'=>$product['description'],'quantity'=>$qty,'price'=>self::money($price),'discount'=>self::money($disc),'subtotal'=>self::money($lineTotal)]);
                 if ((int) $product['track_stock'] === 1) {
-                    $pdo->prepare('INSERT INTO stock_movements (company_id,branch_id,location_id,product_id,movement_type,quantity,source_type,source_id,source_line,reason,user_id,occurred_at) VALUES (:company,:branch,:location,:product,\'sale\',:quantity,\'sale\',:source,:line,:reason,:user,:at)')
-                        ->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'location'=>$locationId,'product'=>$product['id'],'quantity'=>-$qty,'source'=>(string)$saleId,'line'=>(string)$line,'reason'=>'Venda '.$number,'user'=>$u['id'],'at'=>$now]);
+                    $pdo->prepare('INSERT INTO stock_movements (company_id,branch_id,location_id,product_id,movement_type,quantity,unit_cost,source_type,source_id,source_line,reason,user_id,occurred_at) VALUES (:company,:branch,:location,:product,\'sale\',:quantity,:cost,\'sale\',:source,:line,:reason,:user,:at)')
+                        ->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'location'=>$locationId,'product'=>$product['id'],'quantity'=>-$qty,'cost'=>self::money((float)$product['cost_price']),'source'=>(string)$saleId,'line'=>(string)$line,'reason'=>'Venda '.$number,'user'=>$u['id'],'at'=>$now]);
                 }
+                $cogs += round((float) $product['cost_price'] * $qty, 2);
             }
             $remaining = $total;
             foreach ($normalizedPayments as [$i,$method,$amount,$installments,$confirmed,$reference]) {
@@ -141,12 +144,34 @@ final class PosService
                 $ref = $reference !== '' ? $reference : 'PAY-' . $i;
                 $pdo->prepare('INSERT INTO sale_payments (sale_id,payment_method_id,amount,installments,status,operational_confirmation,reference,created_at) VALUES (:sale,:method,:amount,:installments,\'confirmed\',:confirmed,:reference,:at)')
                     ->execute(['sale'=>$saleId,'method'=>$method['id'],'amount'=>self::money($applied),'installments'=>$installments,'confirmed'=>$confirmed ? 1 : 0,'reference'=>$ref,'at'=>$now]);
-                $pdo->prepare('INSERT INTO financial_entries (company_id,branch_id,direction,description,document_number,issue_date,due_date,amount,settled_amount,status,source_type,source_id,installment_number,installment_count,created_by,created_at,updated_at) VALUES (:company,:branch,\'in\',:description,:document,:date,:date,:amount,:amount,\'settled\',\'sale_payment\',:source,:installment,:count,:user,:at,:at)')
-                    ->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'description'=>'Venda '.$number.' - '.$method['name'],'document'=>$number,'date'=>date('Y-m-d'),'amount'=>self::money($applied),'source'=>$saleId.'-'.$i,'installment'=>1,'count'=>$installments,'user'=>$u['id'],'at'=>$now]);
+                FinanceLedger::post($pdo, $u, [
+                    'direction' => 'in',
+                    'category' => FinanceLedger::SALES,
+                    'description' => 'Venda '.$number.' - '.$method['name'],
+                    'document' => $number,
+                    'amount' => $applied,
+                    'status' => 'settled',
+                    'source_type' => 'sale_payment',
+                    'source_id' => $saleId.'-'.$i,
+                    'installment_count' => $installments,
+                    'customer_id' => $customerId ?: null,
+                ]);
                 if ($method['method_type'] === 'cash') {
                     $pdo->prepare('INSERT INTO cash_movements (cash_session_id,movement_type,amount,reason,source_type,source_id,user_id,created_at) VALUES (:session,\'sale\',:amount,:reason,\'sale\',:source,:user,:at)')
                         ->execute(['session'=>$session['id'],'amount'=>self::money($applied),'reason'=>'Venda '.$number,'source'=>(string)$saleId,'user'=>$u['id'],'at'=>$now]);
                 }
+            }
+            if ($cogs > 0) {
+                FinanceLedger::post($pdo, $u, [
+                    'direction' => 'out',
+                    'category' => FinanceLedger::COGS,
+                    'description' => 'CMV venda '.$number,
+                    'document' => $number,
+                    'amount' => $cogs,
+                    'status' => 'settled',
+                    'source_type' => 'sale_cogs',
+                    'source_id' => (string) $saleId,
+                ]);
             }
             if ($suspendedId !== null) {
                 $draft = $pdo->prepare('UPDATE suspended_sales SET status=\'completed\',completed_sale_id=:sale,updated_at=:at WHERE id=:id AND company_id=:company AND branch_id=:branch AND operator_id=:operator AND status=\'open\'');
@@ -225,6 +250,16 @@ final class PosService
             $stmt=$pdo->prepare('SELECT * FROM sales WHERE id=:id AND company_id=:company AND branch_id=:branch');
             $stmt->execute(['id'=>$saleId,'company'=>$u['company_id'],'branch'=>$u['branch_id']]); $sale=$stmt->fetch();
             if (!$sale || $sale['status'] !== 'completed') throw new \RuntimeException('Venda não pode ser cancelada.');
+            $returns=$pdo->prepare('SELECT COUNT(*) FROM sale_returns WHERE sale_id=:sale AND status=\'confirmed\'');
+            $returns->execute(['sale'=>$saleId]);
+            if ((int)$returns->fetchColumn() > 0) {
+                throw new \RuntimeException('Esta venda possui devolução. Use o estorno já registrado; não cancele o cupom.');
+            }
+            $dup=$pdo->prepare('SELECT COUNT(*) FROM cash_movements WHERE source_type=\'sale_cancel\' AND source_id=:source');
+            $dup->execute(['source'=>(string)$saleId]);
+            if ((int)$dup->fetchColumn() > 0) {
+                throw new \RuntimeException('Estorno de caixa desta venda já existe.');
+            }
             $location=$this->location($pdo,$u); $now=date('Y-m-d H:i:s');
             $items=$pdo->prepare('SELECT si.*,p.track_stock FROM sale_items si JOIN products p ON p.id=si.product_id WHERE si.sale_id=:sale');
             $items->execute(['sale'=>$saleId]);
@@ -232,12 +267,30 @@ final class PosService
                 $pdo->prepare('INSERT INTO stock_movements (company_id,branch_id,location_id,product_id,movement_type,quantity,source_type,source_id,source_line,reason,user_id,occurred_at) VALUES (:company,:branch,:location,:product,\'sale_cancel\',:quantity,\'sale_cancel\',:source,:line,:reason,:user,:at)')
                     ->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'location'=>$location,'product'=>$item['product_id'],'quantity'=>$item['quantity'],'source'=>(string)$saleId,'line'=>(string)$item['id'],'reason'=>$reason,'user'=>$u['id'],'at'=>$now]);
             }
-            $pdo->prepare('UPDATE financial_entries SET status=\'cancelled\',updated_at=:at WHERE company_id=:company AND source_type=\'sale_payment\' AND source_id LIKE :source')->execute(['at'=>$now,'company'=>$u['company_id'],'source'=>$saleId.'-%']);
-            $pdo->prepare('INSERT INTO cash_movements (cash_session_id,movement_type,amount,reason,source_type,source_id,user_id,authorized_by,created_at) SELECT cm.cash_session_id,\'sale_cancel\',cm.amount,:reason,\'sale_cancel\',cm.source_id,:user,:user,:at FROM cash_movements cm WHERE cm.source_type=\'sale\' AND cm.source_id=:source')
-                ->execute(['reason'=>$reason,'user'=>$u['id'],'at'=>$now,'source'=>(string)$saleId]);
+            FinanceLedger::cancelBySourcePrefix($pdo, (int)$u['company_id'], 'sale_payment', $saleId.'-');
+            FinanceLedger::cancelBySource($pdo, (int)$u['company_id'], 'sale_cogs', (string)$saleId);
+            $cashTarget = $this->cashSessionForReversal($pdo, $u, (int)$sale['cash_session_id']);
+            $orig=$pdo->prepare('SELECT amount FROM cash_movements WHERE source_type=\'sale\' AND source_id=:source');
+            $orig->execute(['source'=>(string)$saleId]);
+            foreach ($orig->fetchAll() as $move) {
+                $pdo->prepare('INSERT INTO cash_movements (cash_session_id,movement_type,amount,reason,source_type,source_id,user_id,authorized_by,created_at) VALUES (:session,\'sale_cancel\',:amount,:reason,\'sale_cancel\',:source,:user,:user,:at)')
+                    ->execute(['session'=>$cashTarget,'amount'=>$move['amount'],'reason'=>$reason,'source'=>(string)$saleId,'user'=>$u['id'],'at'=>$now]);
+            }
             $pdo->prepare('UPDATE sales SET status=\'cancelled\',cancelled_at=:at,cancelled_by=:user,cancellation_reason=:reason,updated_at=:at WHERE id=:id')->execute(['at'=>$now,'user'=>$u['id'],'reason'=>trim($reason),'id'=>$saleId]);
             Audit::log('sale.cancelled','sales',$saleId,['status'=>'completed'],['status'=>'cancelled','reason'=>$reason]);
         });
+    }
+
+    private function cashSessionForReversal(PDO $pdo, array $u, int $originalId): int
+    {
+        $stmt=$pdo->prepare('SELECT id,status FROM cash_sessions WHERE id=:id AND company_id=:company');
+        $stmt->execute(['id'=>$originalId,'company'=>$u['company_id']]);
+        $row=$stmt->fetch();
+        if ($row && $row['status']==='open') {
+            return (int)$row['id'];
+        }
+        $open=$this->openSession($pdo,$u);
+        return (int)$open['id'];
     }
 
     /** @return array<string,mixed> */

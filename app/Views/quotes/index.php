@@ -35,6 +35,11 @@
     <div class="field"><label>Valor</label><input name="amount" data-mask="money" value="<?= View::e(number_format((float) $detail['total'], 2, ',', '.')) ?>" placeholder="Ex.: 150,00"></div></div>
     <button class="primary">Converter em venda</button>
   </form>
+  <form method="post" action="/quotes/cancel" class="actions" data-confirm-twice="cancelar" data-confirm-item="<?= View::e($detail['quote_number']) ?>"><?= Csrf::field() ?>
+    <input type="hidden" name="quote_id" value="<?= (int) $detail['id'] ?>">
+    <input name="reason" minlength="5" required placeholder="Ex.: Cliente desistiu do orçamento">
+    <button>Cancelar orçamento</button>
+  </form>
   <?php endif ?>
 </div></div>
 <?php endif ?>

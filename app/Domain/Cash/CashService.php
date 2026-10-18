@@ -7,6 +7,7 @@ namespace App\Domain\Cash;
 use App\Core\Audit;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Domain\Finance\FinanceLedger;
 use PDO;
 
 final class CashService
@@ -43,9 +44,19 @@ final class CashService
         if(mb_strlen(trim($reason))<5) throw new \InvalidArgumentException('Informe uma justificativa com ao menos 5 caracteres.');
         return Database::transactional(function(PDO $pdo) use($u,$type,$value,$reason): int {
             $session=$this->current(); if(!$session) throw new \RuntimeException('Nenhum caixa aberto.');
-            $pdo->prepare('INSERT INTO cash_movements (cash_session_id,movement_type,amount,reason,user_id,created_at) VALUES (:session,:type,:amount,:reason,:user,:at)')
-                ->execute(['session'=>$session['id'],'type'=>$type,'amount'=>$value,'reason'=>trim($reason),'user'=>$u['id'],'at'=>date('Y-m-d H:i:s')]);
-            $id=(int)$pdo->lastInsertId(); Audit::log('cash.'.$type,'cash_movements',$id,null,['amount'=>$value,'reason'=>$reason]); return $id;
+            $pdo->prepare('INSERT INTO cash_movements (cash_session_id,movement_type,amount,reason,source_type,source_id,user_id,created_at) VALUES (:session,:type,:amount,:reason,\'cash_move\',:source,:user,:at)')
+                ->execute(['session'=>$session['id'],'type'=>$type,'amount'=>$value,'reason'=>trim($reason),'source'=>bin2hex(random_bytes(8)),'user'=>$u['id'],'at'=>date('Y-m-d H:i:s')]);
+            $id=(int)$pdo->lastInsertId();
+            FinanceLedger::post($pdo, $u, [
+                'direction' => $type === 'supply' ? 'in' : 'out',
+                'category' => $type === 'supply' ? FinanceLedger::CASH_IN : FinanceLedger::CASH_OUT,
+                'description' => ($type === 'supply' ? 'Reforço de caixa' : 'Sangria de caixa').': '.trim($reason),
+                'amount' => (float) $value,
+                'status' => 'settled',
+                'source_type' => 'cash_movement',
+                'source_id' => (string) $id,
+            ]);
+            Audit::log('cash.'.$type,'cash_movements',$id,null,['amount'=>$value,'reason'=>$reason]); return $id;
         });
     }
 

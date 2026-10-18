@@ -109,8 +109,10 @@ final class ManagementController
         $u = Auth::user();
         $pdo = Database::connection();
         $entries = $pdo->prepare(
-            'SELECT e.*, c.name customer_name, s.name supplier_name FROM financial_entries e
+            'SELECT e.*, c.name customer_name, s.name supplier_name, cat.name category_name
+             FROM financial_entries e
              LEFT JOIN customers c ON c.id=e.customer_id LEFT JOIN suppliers s ON s.id=e.supplier_id
+             LEFT JOIN financial_categories cat ON cat.id=e.category_id
              WHERE e.company_id=:company AND e.branch_id=:branch ORDER BY e.due_date, e.id DESC LIMIT 300'
         );
         $entries->execute(['company' => $u['company_id'], 'branch' => $u['branch_id']]);
@@ -167,6 +169,19 @@ final class ManagementController
         }
     }
 
+    public function quoteCancel(): void
+    {
+        Auth::authorize('sales.view');
+        Csrf::enforce();
+        try {
+            $this->service->cancelQuote((int) ($_POST['quote_id'] ?? 0), (string) ($_POST['reason'] ?? ''));
+            View::redirect('/quotes', 'sucesso', 'Orçamento cancelado. Nenhum estoque ou financeiro foi movimentado.');
+        } catch (\Throwable $e) {
+            Session::flash('erro', $e->getMessage());
+            View::redirect('/quotes');
+        }
+    }
+
     public function financeSettle(): void
     {
         Auth::authorize('finance.manage');
@@ -180,6 +195,19 @@ final class ManagementController
                 (string) ($_POST['notes'] ?? '')
             );
             View::redirect('/finance', 'sucesso', 'Liquidação registrada.');
+        } catch (\Throwable $e) {
+            Session::flash('erro', $e->getMessage());
+            View::redirect('/finance');
+        }
+    }
+
+    public function financeCancel(): void
+    {
+        Auth::authorize('finance.manage');
+        Csrf::enforce();
+        try {
+            $this->service->cancelEntry((int) ($_POST['entry_id'] ?? 0), (string) ($_POST['reason'] ?? ''));
+            View::redirect('/finance', 'sucesso', 'Lançamento cancelado. O histórico foi preservado.');
         } catch (\Throwable $e) {
             Session::flash('erro', $e->getMessage());
             View::redirect('/finance');

@@ -65,14 +65,18 @@
       const type = (old.getAttribute('type') || 'text/javascript').toLowerCase();
       if (type !== 'text/javascript' && type !== 'application/javascript' && type !== '') continue;
       if (old.src) {
-        const code = await fetch(old.src, { credentials: 'same-origin', cache: 'no-cache' }).then((res) => {
-          if (!res.ok) throw new Error('Falha ao carregar script');
-          return res.text();
+        await new Promise((resolve, reject) => {
+          const next = document.createElement('script');
+          next.src = old.src;
+          next.async = false;
+          next.onload = () => resolve();
+          next.onerror = () => reject(new Error('Falha ao carregar script'));
+          old.replaceWith(next);
         });
-        (0, eval)(code + '\n//# sourceURL=' + old.src);
-        old.remove();
       } else {
-        (0, eval)(old.textContent);
+        const next = document.createElement('script');
+        next.textContent = old.textContent;
+        old.replaceWith(next);
       }
     }
   }
@@ -105,6 +109,7 @@
 
       window.__posAbort && window.__posAbort.abort();
       window.__labelsAbort && window.__labelsAbort.abort();
+      window.__labelsPageAbort && window.__labelsPageAbort.abort();
 
       const nextMain = doc.querySelector('.main-content');
       const currentMain = main();

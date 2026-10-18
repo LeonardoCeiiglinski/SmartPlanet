@@ -7,6 +7,7 @@ namespace App\Domain\Purchasing;
 use App\Core\Audit;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Domain\Finance\FinanceLedger;
 use PDO;
 
 final class PurchaseService
@@ -167,8 +168,52 @@ final class PurchaseService
             $status = (int) $remaining->fetchColumn() === 0 ? 'received' : 'partially_received';
             $pdo->prepare('UPDATE purchase_orders SET status=:status,updated_at=:at WHERE id=:id AND company_id=:company AND branch_id=:branch')
                 ->execute(['status' => $status, 'at' => $now, 'id' => $orderId, 'company' => $user['company_id'], 'branch' => $user['branch_id']]);
+            $payable = 0.0;
+            foreach ($received as [$item, $quantity]) {
+                $payable += round((float) $quantity * (float) $item['unit_cost'], 2);
+            }
+            if ($payable > 0) {
+                FinanceLedger::post($pdo, $user, [
+                    'direction' => 'out',
+                    'category' => FinanceLedger::PURCHASES,
+                    'description' => 'Compra '.$order['order_number'].' · '.$number,
+                    'document' => $number,
+                    'amount' => $payable,
+                    'status' => 'open',
+                    'source_type' => 'purchase_receipt',
+                    'source_id' => (string) $receiptId,
+                    'supplier_id' => $order['supplier_id'],
+                ]);
+            }
             Audit::log('purchase.received', 'purchase_receipts', $receiptId, null, ['order_id' => $orderId, 'status' => $status]);
             return $receiptId;
+        });
+    }
+
+    public function cancel(int $orderId, string $reason): void
+    {
+        $user = Auth::user();
+        if (mb_strlen(trim($reason)) < 5) {
+            throw new \InvalidArgumentException('Justificativa obrigatória.');
+        }
+        Database::transactional(function (PDO $pdo) use ($user, $orderId, $reason): void {
+            $order = $this->find($orderId);
+            if (!$order || !in_array($order['status'], ['ordered', 'draft'], true)) {
+                throw new \RuntimeException('Só é possível cancelar pedido ainda não recebido.');
+            }
+            $receipts = $pdo->prepare('SELECT COUNT(*) FROM purchase_receipts WHERE purchase_order_id=:id');
+            $receipts->execute(['id' => $orderId]);
+            if ((int) $receipts->fetchColumn() > 0) {
+                throw new \RuntimeException('Pedido com recebimento não pode ser cancelado. Estorne o financeiro da compra se necessário.');
+            }
+            $pdo->prepare('UPDATE purchase_orders SET status=\'cancelled\',notes=:notes,updated_at=:at WHERE id=:id AND company_id=:company')
+                ->execute([
+                    'notes' => trim(($order['notes'] ? $order['notes'] . ' | ' : '') . 'Cancelado: ' . trim($reason)),
+                    'at' => date('Y-m-d H:i:s'),
+                    'id' => $orderId,
+                    'company' => $user['company_id'],
+                ]);
+            Audit::log('purchase.cancelled', 'purchase_orders', $orderId, ['status' => $order['status']], ['reason' => $reason]);
         });
     }
 
