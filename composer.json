@@ -1,6 +1,6 @@
 {
-  "name": "felipegoulart06/erp-pdv-etiquetas",
-  "description": "ERP e PDV em PHP com impressão térmica 33x21 mm",
+  "name": "smartplanet/erp-pdv",
+  "description": "ERP e PDV SmartPlanet com impressão térmica 33x21 mm",
   "type": "project",
   "require": {
     "php": "^8.2",

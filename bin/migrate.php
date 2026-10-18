@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 
 use App\Core\Database;
+use App\Setup\Migrator;
 
 $pdo = Database::connection();
 $driver = Database::driver();
@@ -24,6 +25,12 @@ $pdo->exec(
 $direction = $argv[1] ?? 'up';
 $files = glob(dirname(__DIR__) . '/database/migrations/*.php') ?: [];
 sort($files);
+
+if ($direction === 'up') {
+    Migrator::up();
+    echo "Banco atualizado.\n";
+    exit(0);
+}
 
 if ($direction === 'down') {
     $batch = (int) $pdo->query('SELECT COALESCE(MAX(batch), 0) FROM schema_migrations')->fetchColumn();

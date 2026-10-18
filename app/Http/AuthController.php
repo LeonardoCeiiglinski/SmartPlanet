@@ -74,7 +74,7 @@ final class AuthController
             ]);
             $url = rtrim(Env::get('APP_URL', 'http://localhost:8080') ?? '', '/') . '/reset?token=' . urlencode($token);
             file_put_contents(
-                BASE_PATH . '/storage/logs/mail.log',
+                \App\Core\Paths::writable('logs/mail.log'),
                 sprintf("[%s] Recuperação para %s: %s\n", date('c'), $email, $url),
                 FILE_APPEND | LOCK_EX
             );

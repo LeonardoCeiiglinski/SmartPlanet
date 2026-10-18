@@ -24,8 +24,15 @@ final class Database
             return self::$pdo;
         }
 
-        $driver = Env::get('DB_DRIVER', 'sqlite');
+        $url = Env::get('DATABASE_URL') ?? Env::get('MYSQL_URL') ?? Env::get('MYSQL_PUBLIC_URL');
+        if ($url) {
+            self::applyUrl($url);
+        }
+        $driver = Env::get('DB_DRIVER', Paths::isServerless() ? 'mysql' : 'sqlite');
         if ($driver === 'sqlite') {
+            if (Paths::isServerless()) {
+                throw new \RuntimeException('Na Vercel use MySQL persistente (PlanetScale, Railway, Aiven, TiDB). SQLite não sobrevive entre requisições.');
+            }
             $database = Env::get('DB_DATABASE', 'storage/app/erp.sqlite') ?? 'storage/app/erp.sqlite';
             $path = self::absolutePath($database);
             $directory = dirname($path);
@@ -45,7 +52,11 @@ final class Database
                 Env::get('DB_PORT', '3306'),
                 Env::require('DB_DATABASE')
             );
-            self::$pdo = new PDO($dsn, Env::require('DB_USERNAME'), Env::get('DB_PASSWORD', ''));
+            $options = [];
+            if (Env::bool('DB_SSL', Paths::isServerless())) {
+                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+            }
+            self::$pdo = new PDO($dsn, Env::require('DB_USERNAME'), Env::get('DB_PASSWORD', '') ?? '', $options);
         } else {
             throw new \RuntimeException('DB_DRIVER deve ser mysql ou sqlite.');
         }
@@ -79,6 +90,40 @@ final class Database
                 $pdo->rollBack();
             }
             throw $exception;
+        }
+    }
+
+    private static function applyUrl(string $url): void
+    {
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['host'])) {
+            throw new \RuntimeException('DATABASE_URL inválida.');
+        }
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'mysql'));
+        if (!in_array($scheme, ['mysql', 'mariadb', 'mysql2'], true)) {
+            throw new \RuntimeException('Use uma URL MySQL/MariaDB (mysql://usuario:senha@host:3306/banco).');
+        }
+        if (getenv('DB_DRIVER') === false) {
+            putenv('DB_DRIVER=mysql');
+            $_ENV['DB_DRIVER'] = 'mysql';
+        }
+        putenv('DB_HOST=' . $parts['host']);
+        $_ENV['DB_HOST'] = $parts['host'];
+        $port = (string) ($parts['port'] ?? 3306);
+        putenv('DB_PORT=' . $port);
+        $_ENV['DB_PORT'] = $port;
+        $db = ltrim((string) ($parts['path'] ?? ''), '/');
+        if ($db !== '') {
+            putenv('DB_DATABASE=' . $db);
+            $_ENV['DB_DATABASE'] = $db;
+        }
+        if (isset($parts['user'])) {
+            putenv('DB_USERNAME=' . $parts['user']);
+            $_ENV['DB_USERNAME'] = $parts['user'];
+        }
+        if (isset($parts['pass'])) {
+            putenv('DB_PASSWORD=' . $parts['pass']);
+            $_ENV['DB_PASSWORD'] = $parts['pass'];
         }
     }
 

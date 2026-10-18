@@ -16,12 +16,19 @@ final class Session
         session_set_cookie_params([
             'lifetime' => 0,
             'path' => '/',
-            'secure' => Env::bool('SESSION_SECURE', false),
+            'secure' => Env::bool('SESSION_SECURE', Paths::isHttps()),
             'httponly' => true,
             'samesite' => 'Lax',
         ]);
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
+        $driver = Env::get('SESSION_DRIVER', Paths::isServerless() ? 'database' : 'files');
+        if ($driver === 'database') {
+            $handler = new PdoSessionHandler(Database::connection());
+            session_set_save_handler($handler, true);
+        } elseif (Paths::isServerless()) {
+            session_save_path(Paths::writable('sessions'));
+        }
         session_start();
 
         $now = time();

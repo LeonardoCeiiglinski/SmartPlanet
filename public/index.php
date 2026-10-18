@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/bootstrap.php';
+require dirname(__DIR__) . '/app/bootstrap.php';
 
 use App\Core\Auth;
 use App\Core\Csrf;
@@ -27,6 +27,30 @@ use App\Http\UserController;
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
+$static = [
+    '/favicon.png' => [__DIR__ . '/favicon.png', 'image/png'],
+    '/favicon.ico' => [__DIR__ . '/favicon.png', 'image/png'],
+];
+if (isset($static[$path]) && is_file($static[$path][0])) {
+    header('Content-Type: ' . $static[$path][1]);
+    header('Cache-Control: public, max-age=86400');
+    readfile($static[$path][0]);
+    exit;
+}
+if (str_starts_with($path, '/assets/')) {
+    $file = __DIR__ . $path;
+    $real = realpath($file);
+    $root = realpath(__DIR__ . '/assets');
+    if ($real && $root && str_starts_with($real, $root) && is_file($real)) {
+        $types = ['css' => 'text/css', 'js' => 'text/javascript', 'png' => 'image/png', 'svg' => 'image/svg+xml', 'woff2' => 'font/woff2'];
+        $ext = strtolower(pathinfo($real, PATHINFO_EXTENSION));
+        header('Content-Type: ' . ($types[$ext] ?? 'application/octet-stream') . '; charset=UTF-8');
+        header('Cache-Control: public, max-age=3600');
+        readfile($real);
+        exit;
+    }
+}
+
 if (str_starts_with($path, '/legacy/')) {
     $relative = substr($path, strlen('/legacy/'));
     $allowed = preg_match('#^(css/styles\.css|js/(app|layout|barcode|render|tspl)\.js)$#', $relative);
@@ -46,7 +70,9 @@ try {
 } catch (Throwable $exception) {
     http_response_code(503);
     echo '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Instalação necessária</title>';
-    echo '<body><h1>Instalação necessária</h1><p>Execute <code>php bin/migrate.php</code> e depois <code>php bin/install.php ...</code>.</p></body></html>';
+    echo '<body><h1>Instalação necessária</h1>';
+    echo '<p>Configure o MySQL na Vercel e as variáveis <code>DATABASE_URL</code> (ou <code>DB_*</code>), <code>INSTALL_EMAIL</code> e <code>INSTALL_PASSWORD</code>.</p>';
+    echo '<p>Em ambiente local: <code>php bin/migrate.php</code> e <code>php bin/install.php ...</code>.</p></body></html>';
     exit;
 }
 
