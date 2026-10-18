@@ -24,7 +24,7 @@ final class Router
         $handler = $this->routes[$method . ' ' . $path] ?? null;
         if ($handler === null) {
             http_response_code(404);
-            View::render('errors/404', ['title' => 'Página não encontrada']);
+            View::render('errors/404', ['title' => 'Página não encontrada'], Auth::check() ? 'layout' : 'guest');
             return;
         }
         $handler();

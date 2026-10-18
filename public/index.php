@@ -10,9 +10,18 @@ use App\Core\Database;
 use App\Core\Router;
 use App\Core\View;
 use App\Http\AuthController;
+use App\Http\CashController;
+use App\Http\ImportController;
+use App\Http\LabelController;
+use App\Http\ManagementController;
 use App\Http\PeopleController;
+use App\Http\PosController;
 use App\Http\ProductController;
+use App\Http\PurchaseController;
+use App\Http\ReportController;
 use App\Http\SettingsController;
+use App\Http\SalesController;
+use App\Http\StockController;
 use App\Http\UserController;
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -42,10 +51,19 @@ try {
 
 $router = new Router();
 $auth = new AuthController();
+$cash = new CashController();
+$imports = new ImportController();
+$labels = new LabelController();
+$management = new ManagementController();
 $products = new ProductController();
 $people = new PeopleController();
+$pos = new PosController();
+$purchases = new PurchaseController();
+$stock = new StockController();
 $users = new UserController();
 $settings = new SettingsController();
+$reports = new ReportController();
+$sales = new SalesController();
 
 $router->get('/login', [$auth, 'loginForm']);
 $router->post('/login', [$auth, 'login']);
@@ -67,12 +85,17 @@ $router->get('/', static function (): void {
            (SELECT COUNT(*) FROM sales WHERE company_id=:company AND branch_id=:branch AND status='completed' AND completed_at>=:today) AS sales_count,
            (SELECT COALESCE(SUM(total),0) FROM sales WHERE company_id=:company2 AND branch_id=:branch2 AND status='completed' AND completed_at>=:today2) AS sales_total,
            (SELECT COUNT(*) FROM products WHERE company_id=:company3 AND active=1) AS products_count,
-           (SELECT COUNT(*) FROM cash_sessions WHERE company_id=:company4 AND branch_id=:branch4 AND status='open') AS open_cash"
+           (SELECT COUNT(*) FROM cash_sessions WHERE company_id=:company4 AND branch_id=:branch4 AND status='open') AS open_cash,
+           (SELECT COUNT(*) FROM products p WHERE p.company_id=:company5 AND p.track_stock=1 AND p.active=1 AND COALESCE((SELECT SUM(quantity) FROM stock_movements m WHERE m.product_id=p.id),0) <= p.minimum_stock) AS low_stock,
+           (SELECT COALESCE(SUM(amount-settled_amount),0) FROM financial_entries WHERE company_id=:company6 AND branch_id=:branch6 AND direction='in' AND status IN ('open','partial')) AS receivable,
+           (SELECT COALESCE(SUM(amount-settled_amount),0) FROM financial_entries WHERE company_id=:company7 AND branch_id=:branch7 AND direction='out' AND status IN ('open','partial')) AS payable"
     );
     $stmt->execute([
         'company' => $company, 'branch' => $branch, 'today' => $today . ' 00:00:00',
         'company2' => $company, 'branch2' => $branch, 'today2' => $today . ' 00:00:00',
         'company3' => $company, 'company4' => $company, 'branch4' => $branch,
+        'company5' => $company, 'company6' => $company, 'branch6' => $branch,
+        'company7' => $company, 'branch7' => $branch,
     ]);
     View::render('dashboard', ['title' => 'Painel', 'stats' => $stmt->fetch()]);
 });
@@ -82,8 +105,24 @@ $router->get('/products/new', [$products, 'form']);
 $router->get('/products/edit', [$products, 'form']);
 $router->post('/products/save', [$products, 'save']);
 $router->post('/products/status', [$products, 'status']);
+$router->get('/products/export', [$imports, 'export']);
+$router->get('/products/import', [$imports, 'productsForm']);
+$router->get('/products/import/template', [$imports, 'template']);
+$router->post('/products/import/upload', [$imports, 'upload']);
+$router->post('/products/import/confirm', [$imports, 'confirm']);
+$router->get('/labels', [$labels, 'index']);
+$router->post('/labels/history', [$labels, 'printHistory']);
+$router->post('/labels/migration/preview', [$labels, 'migrationPreview']);
+$router->post('/labels/migration', [$labels, 'migrate']);
 $router->get('/people', [$people, 'index']);
 $router->post('/people/save', [$people, 'save']);
+$router->get('/stock', [$stock, 'index']);
+$router->post('/stock/adjust', [$stock, 'adjust']);
+$router->post('/stock/inventory/start', [$stock, 'inventoryStart']);
+$router->post('/stock/inventory/close', [$stock, 'inventoryClose']);
+$router->get('/purchases', [$purchases, 'index']);
+$router->post('/purchases/create', [$purchases, 'create']);
+$router->post('/purchases/receive', [$purchases, 'receive']);
 $router->get('/users', [$users, 'index']);
 $router->get('/users/new', [$users, 'form']);
 $router->get('/users/edit', [$users, 'form']);
@@ -92,6 +131,25 @@ $router->get('/settings', [$settings, 'index']);
 $router->post('/settings/company', [$settings, 'company']);
 $router->post('/settings/dictionary', [$settings, 'dictionary']);
 $router->get('/audit', [$settings, 'audit']);
+$router->get('/pos', [$pos, 'index']);
+$router->get('/api/products/search', [$pos, 'search']);
+$router->post('/pos/complete', [$pos, 'complete']);
+$router->post('/pos/suspend', [$pos, 'suspend']);
+$router->post('/pos/recover', [$pos, 'recover']);
+$router->get('/sales', [$sales, 'index']);
+$router->post('/sales/cancel', [$pos, 'cancel']);
+$router->post('/sales/return', [$management, 'returnSale']);
+$router->get('/quotes', [$management, 'quotes']);
+$router->post('/quotes/create', [$management, 'quoteCreate']);
+$router->post('/quotes/convert', [$management, 'quoteConvert']);
+$router->get('/finance', [$management, 'finance']);
+$router->post('/finance/create', [$management, 'financeCreate']);
+$router->post('/finance/settle', [$management, 'financeSettle']);
+$router->get('/reports', [$reports, 'index']);
+$router->get('/cash', [$cash, 'index']);
+$router->post('/cash/open', [$cash, 'open']);
+$router->post('/cash/move', [$cash, 'move']);
+$router->post('/cash/close', [$cash, 'close']);
 
 $router->dispatch(strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET'), rtrim($path, '/') ?: '/');
 

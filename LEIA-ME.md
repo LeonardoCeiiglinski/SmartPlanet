@@ -1,7 +1,17 @@
+# ERP PDV + etiquetas 33 × 21 mm
+
+O repositório agora contém o sistema comercial PHP (PDV, estoque, caixa, financeiro) e preserva o aplicativo estático de etiquetas.
+
+- **ERP/PDV:** veja [`docs/instalacao.md`](docs/instalacao.md). Execute `php -S localhost:8080 -t public public/router.php` após migrar e instalar.
+- **Etiquetas no ERP:** menu Etiquetas, alimentado pelo cadastro central. A impressão térmica continua no navegador (`layout.js`, `barcode.js`, `render.js`, `tspl.js`).
+- **App estático original:** `index.html` e tag `backup-static-20261017`.
+- **Fiscal:** campos cadastrais existem; **não há emissão de NF-e/NFC-e/NFS-e**. Recibo do PDV é não fiscal. Detalhes em [`docs/fiscal.md`](docs/fiscal.md).
+- **MarketUP:** não há API pública usada. Importação/exportação de planilha é o meio oficial suportado.
+
 # Etiquetas 33 × 21 mm — 4BARCODE 4B-2054N / Tomate MDK-2054N
 
 Aplicativo local para cadastrar produtos e imprimir etiquetas de **33 × 21 mm** em bobina de **3 colunas**.
-Não precisa de internet, instalação, servidor nem cadastro.
+Pode ser aberto sem servidor pelo `index.html`. No ERP, a mesma geometria é usada no módulo autenticado.
 
 ## Como abrir
 

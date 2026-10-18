@@ -21,8 +21,10 @@ final class PeopleController
         $sql = "SELECT * FROM {$type} WHERE company_id=:company";
         $params = ['company' => Auth::user()['company_id']];
         if ($query !== '') {
-            $sql .= ' AND (LOWER(name) LIKE :query OR document LIKE :raw OR LOWER(email) LIKE :query)';
-            $params['query'] = '%' . mb_strtolower($query) . '%';
+            $like = '%' . mb_strtolower($query) . '%';
+            $sql .= ' AND (LOWER(name) LIKE :query OR document LIKE :raw OR LOWER(email) LIKE :query_email)';
+            $params['query'] = $like;
+            $params['query_email'] = $like;
             $params['raw'] = '%' . preg_replace('/\D+/', '', $query) . '%';
         }
         $sql .= ' ORDER BY active DESC, name LIMIT 200';

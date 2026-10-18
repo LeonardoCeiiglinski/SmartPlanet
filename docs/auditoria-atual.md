@@ -95,6 +95,12 @@ Em 17/10/2026:
 
 Não houve teste físico com leitor ou impressora durante esta auditoria.
 
+## Correções posteriores
+
+- O `@page` inicial de `index.html` foi alinhado para 104 mm.
+- O cadastro SQL passou a exigir código de barras único.
+- O PDV consulta o catálogo autenticado; o leitor HID continua no navegador.
+
 ## Restauração
 
 Para consultar o estado anterior:

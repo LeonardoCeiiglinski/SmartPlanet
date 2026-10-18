@@ -23,31 +23,34 @@ final class ProductService
         $where = 'p.company_id = :company';
         $params = ['company' => $companyId];
         if ($search !== '') {
-            $where .= ' AND (LOWER(p.description) LIKE :search OR LOWER(p.internal_code) LIKE :search OR pb.barcode LIKE :raw)';
-            $params['search'] = '%' . mb_strtolower($search) . '%';
+            $like = '%' . mb_strtolower($search) . '%';
+            $where .= ' AND (LOWER(p.description) LIKE :search OR LOWER(p.internal_code) LIKE :search_code
+                        OR EXISTS (
+                            SELECT 1 FROM product_barcodes search_pb
+                            WHERE search_pb.product_id = p.id AND search_pb.barcode LIKE :raw
+                        ))';
+            $params['search'] = $like;
+            $params['search_code'] = $like;
             $params['raw'] = '%' . $search . '%';
         }
         $pdo = Database::connection();
-        $count = $pdo->prepare(
-            "SELECT COUNT(DISTINCT p.id) FROM products p
-             LEFT JOIN product_barcodes pb ON pb.product_id = p.id WHERE {$where}"
-        );
+        $count = $pdo->prepare("SELECT COUNT(*) FROM products p WHERE {$where}");
         $count->execute($params);
         $total = (int) $count->fetchColumn();
         $sql = "SELECT p.*, u.code AS unit_code, c.name AS category_name,
-                       MAX(CASE WHEN pb.is_primary = 1 THEN pb.barcode END) AS barcode,
-                       COALESCE(SUM(sm.quantity), 0) AS stock_quantity
+                       (SELECT pb.barcode FROM product_barcodes pb
+                        WHERE pb.product_id = p.id AND pb.is_primary = 1 LIMIT 1) AS barcode,
+                       COALESCE((SELECT SUM(sm.quantity) FROM stock_movements sm
+                                 WHERE sm.product_id = p.id AND sm.company_id = p.company_id
+                                   AND sm.branch_id = :stock_branch), 0) AS stock_quantity
                 FROM products p
                 JOIN units u ON u.id = p.unit_id
                 LEFT JOIN categories c ON c.id = p.category_id
-                LEFT JOIN product_barcodes pb ON pb.product_id = p.id
-                LEFT JOIN stock_movements sm ON sm.product_id = p.id
                 WHERE {$where}
-                GROUP BY p.id, u.code, c.name
                 ORDER BY p.active DESC, p.description ASC
                 LIMIT {$perPage} OFFSET {$offset}";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute($params + ['stock_branch' => (int) $user['branch_id']]);
         return [
             'items' => $stmt->fetchAll(),
             'total' => $total,

@@ -100,6 +100,11 @@ final class Auth
         Session::destroy();
     }
 
+    public static function reset(): void
+    {
+        self::$user = null;
+    }
+
     public static function check(): bool
     {
         return self::user() !== null;
@@ -138,7 +143,9 @@ final class Auth
     {
         self::requireLogin();
         if (!self::can($permission)) {
-            http_response_code(403);
+            if (!headers_sent()) {
+                http_response_code(403);
+            }
             throw new \RuntimeException('Você não possui permissão para executar esta operação.');
         }
     }

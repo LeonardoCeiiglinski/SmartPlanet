@@ -88,6 +88,11 @@ tr.inactive { color: #7f8995; background: #fafafa; }
 .muted { color: var(--muted); }
 .money { font-variant-numeric: tabular-nums; }
 .empty { padding: 24px; text-align: center; color: var(--muted); }
+.pos-total { margin-top: 12px; text-align: right; font-size: 22px; }
+.payment-row { display: grid; grid-template-columns: 150px 130px minmax(130px,1fr) 220px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.payment-row input { width: 100%; }
+.receipt { max-width: 720px; margin-inline: auto; }
+.receipt h2 { text-align: center; }
 @media (max-width: 850px) {
   .menu-toggle { display: block; }
   .app-shell { grid-template-columns: 1fr; }
@@ -95,5 +100,12 @@ tr.inactive { color: #7f8995; background: #fafafa; }
   .menu-open .sidebar { display: block; }
   .grid.four, .grid.three, .grid.two { grid-template-columns: 1fr; }
   .top-company { display: none; }
+  .payment-row { grid-template-columns: 1fr; }
+}
+@media print {
+  body * { visibility: hidden; }
+  .receipt, .receipt * { visibility: visible; }
+  .receipt { position: absolute; inset: 0; border: 0; max-width: none; }
+  .receipt button { display: none; }
 }
 

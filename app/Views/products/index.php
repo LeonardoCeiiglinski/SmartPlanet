@@ -6,7 +6,10 @@ use App\Core\View;
 ?>
 <div class="page-header">
   <h1>Produtos e serviços</h1>
-  <?php if (Auth::can('products.manage')): ?><a class="button primary" href="/products/new">Novo cadastro</a><?php endif; ?>
+  <div class="actions">
+    <a class="button" href="/products/export">Exportar CSV</a>
+    <?php if (Auth::can('products.manage')): ?><a class="button" href="/products/import">Importar</a><a class="button primary" href="/products/new">Novo cadastro</a><?php endif; ?>
+  </div>
 </div>
 <div class="panel">
   <div class="panel-body">
