@@ -20,9 +20,11 @@ final class StockService
         $filter = '';
         if ($query !== '') {
             $like = '%' . mb_strtolower($query) . '%';
-            $filter = ' AND (LOWER(p.description) LIKE :query OR LOWER(p.internal_code) LIKE :query_code)';
+            $filter = ' AND (LOWER(p.description) LIKE :query OR LOWER(p.internal_code) LIKE :query_code
+                OR EXISTS (SELECT 1 FROM product_barcodes pb WHERE pb.product_id = p.id AND pb.company_id = p.company_id AND pb.barcode LIKE :barcode))';
             $params['query'] = $like;
             $params['query_code'] = $like;
+            $params['barcode'] = '%' . $query . '%';
         }
         $stmt = Database::connection()->prepare(
             "SELECT p.id,p.internal_code,p.description,p.minimum_stock,u.code AS unit_code,

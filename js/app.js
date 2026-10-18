@@ -722,13 +722,18 @@
   function registrarLeitura(codigoBruto) {
     const codigo = String(codigoBruto || '').trim();
     campoLeitor.value = '';
+    const painel = campoLeitor.closest('details');
+    if (painel) painel.open = true;
     if (codigo.length < 3) return;
-    const produto = estado.produtos.find((p) => p.codigo && p.codigo === codigo);
+    const naFila = estado.produtos.find((p) => p.codigo && p.codigo === codigo);
+    const catalogo = (window.LABELS_CATALOG || []).find((p) => p.codigo && p.codigo === codigo);
+    const produto = naFila || catalogo;
     if (!produto) {
       campoCodigo.value = codigo;
       atualizarDicaCodigo();
-      mostrarResultado('nao', `O código ${codigo} não está cadastrado. Preencha o nome e o preço para registrar esse produto; a próxima leitura já será reconhecida.`);
+      mostrarResultado('nao', `O código ${codigo} não está cadastrado. A venda e a etiqueta usam só produtos já registrados.`);
       bip(false);
+      if (window.SmartPlanetScanner) SmartPlanetScanner.flash('Não cadastrado: ' + codigo, false);
       campoNome.focus();
       campoNome.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
@@ -744,48 +749,19 @@
     if (estado.leituras.length > 2000) estado.leituras.length = 2000;
     salvarLeituras();
     const vezes = estado.leituras.filter((l) => ehHoje(l.quando) && l.produtoId === produto.id).length;
-    mostrarResultado('ok', produto, `Registrado às ${horaLocal(estado.leituras[0].quando)} · ${plural(vezes, 'vez hoje', 'vezes hoje')}`);
+    const extraFila = naFila ? '' : ' Produto do cadastro. A venda entra pelo PDV.';
+    mostrarResultado('ok', produto, `Conferido às ${horaLocal(estado.leituras[0].quando)} · ${plural(vezes, 'vez hoje', 'vezes hoje')}.${extraFila}`);
     bip(true);
+    if (window.SmartPlanetScanner) SmartPlanetScanner.flash(produto.nome, true);
     renderizarLeituras();
     campoLeitor.focus();
   }
 
-  // O leitor envia o código de uma vez, bem mais rápido do que uma pessoa digita.
-  let bufferLeitor = '';
-  let ultimoToque = 0;
-  let rajadaRapida = false;
-  document.addEventListener('keydown', (evento) => {
+  document.addEventListener('smartplanet:scan', (evento) => {
     if (!document.getElementById('form-produto')) return;
-    if (evento.ctrlKey || evento.altKey || evento.metaKey || evento.isComposing) return;
-    const agora = performance.now();
-    if (evento.key === 'Enter' || evento.key === 'Tab') {
-      const codigo = bufferLeitor;
-      const foiRajada = rajadaRapida && codigo.length >= 3 && agora - ultimoToque < 250;
-      bufferLeitor = '';
-      rajadaRapida = false;
-      if (foiRajada) {
-        evento.preventDefault();
-        evento.stopPropagation();
-        const alvo = evento.target;
-        if (alvo instanceof HTMLInputElement && alvo !== campoLeitor && alvo.value.endsWith(codigo)) {
-          alvo.value = alvo.value.slice(0, -codigo.length);
-        }
-        registrarLeitura(codigo);
-      }
-      return;
-    }
-    if (evento.key.length !== 1) return;
-    const intervalo = agora - ultimoToque;
-    if (intervalo > 90) {
-      bufferLeitor = '';
-      rajadaRapida = true;
-    } else if (intervalo > 40) {
-      rajadaRapida = false;
-    }
-    bufferLeitor += evento.key;
-    ultimoToque = agora;
-    if (bufferLeitor.length > B.LIMITE) bufferLeitor = bufferLeitor.slice(-B.LIMITE);
-  }, { capture: true, signal: labelsAbort.signal });
+    evento.preventDefault();
+    registrarLeitura(evento.detail.code);
+  }, { signal: labelsAbort.signal });
 
   campoLeitor.addEventListener('keydown', (evento) => {
     if (evento.key === 'Enter') {

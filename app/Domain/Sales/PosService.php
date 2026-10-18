@@ -13,29 +13,35 @@ use PDO;
 final class PosService
 {
     /** @return array<int,array<string,mixed>> */
-    public function search(string $term): array
+    public function search(string $term, bool $exact = false): array
     {
         $u = Auth::user();
         $term = trim($term);
         if ($term === '' || strlen($term) > 100) {
             return [];
         }
+        $match = $exact
+            ? '(pb.barcode = :exact OR p.internal_code = :exact_code)'
+            : '(pb.barcode = :exact OR p.internal_code = :exact_code OR LOWER(p.description) LIKE LOWER(:term))';
         $stmt = Database::connection()->prepare(
             'SELECT p.id,p.internal_code,p.description,p.sale_price,p.promotional_price,p.promotion_starts_at,p.promotion_ends_at,
                     p.track_stock,pb.barcode
              FROM products p LEFT JOIN product_barcodes pb ON pb.product_id=p.id
              WHERE p.company_id=:company AND p.active=1
-               AND (pb.barcode=:exact OR p.internal_code=:exact_code OR LOWER(p.description) LIKE LOWER(:term))
+               AND ' . $match . '
              ORDER BY CASE WHEN pb.barcode=:exact2 OR p.internal_code=:exact3 THEN 0 ELSE 1 END,p.description LIMIT 20'
         );
-        $stmt->execute([
+        $params = [
             'company' => $u['company_id'],
             'exact' => $term,
             'exact_code' => $term,
             'exact2' => $term,
             'exact3' => $term,
-            'term' => '%' . $term . '%',
-        ]);
+        ];
+        if (!$exact) {
+            $params['term'] = '%' . $term . '%';
+        }
+        $stmt->execute($params);
         return array_map(static function (array $p): array {
             $now = date('Y-m-d H:i:s');
             $promo = $p['promotional_price'] !== null

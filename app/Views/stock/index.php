@@ -27,7 +27,7 @@ use App\Core\View;
 </div>
 <?php endif; ?>
 <div class="panel"><div class="panel-header">Saldos</div><div class="panel-body">
-  <form class="filters"><div class="field"><label>Pesquisar</label><input name="q" value="<?= View::e($query) ?>" placeholder="Digite para pesquisar..."></div><button>Filtrar</button></form>
+  <form class="filters" method="get" action="/stock"><div class="field"><label>Pesquisar</label><input name="q" data-scanner="search" value="<?= View::e($query) ?>" placeholder="Digite ou bipe o código de barras..."></div><button>Filtrar</button></form>
   <div class="table-wrap"><table><thead><tr><th>Código</th><th>Produto</th><th class="num">Mínimo</th><th class="num">Saldo</th><th></th></tr></thead><tbody>
   <?php foreach ($overview['items'] as $item): $low=(float)$item['quantity'] <= (float)$item['minimum_stock']; ?>
     <tr><td><?= View::e($item['internal_code']) ?></td><td><?= View::e($item['description']) ?> <?= $low ? '<span class="badge danger">Baixo</span>' : '' ?></td>

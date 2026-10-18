@@ -68,6 +68,7 @@
         await new Promise((resolve, reject) => {
           const next = document.createElement('script');
           next.src = old.src;
+          if (old.getAttribute('nonce')) next.setAttribute('nonce', old.getAttribute('nonce'));
           next.async = false;
           next.onload = () => resolve();
           next.onerror = () => reject(new Error('Falha ao carregar script'));
@@ -75,6 +76,7 @@
         });
       } else {
         const next = document.createElement('script');
+        if (old.getAttribute('nonce')) next.setAttribute('nonce', old.getAttribute('nonce'));
         next.textContent = old.textContent;
         old.replaceWith(next);
       }
@@ -154,6 +156,25 @@
       if (token === inflight) hideProgress();
     }
   }
+
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('.menu-toggle')) {
+      document.body.classList.toggle('menu-open');
+    }
+    if (event.target.closest('[data-print]')) {
+      window.print();
+    }
+  });
+
+  document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    const message = form.getAttribute('data-confirm');
+    if (message && !window.confirm(message)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
 
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

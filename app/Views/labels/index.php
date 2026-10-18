@@ -21,17 +21,18 @@ HTML;
 
 $vPage = (string) (@filemtime(BASE_PATH . '/public/assets/labels-page.js') ?: time());
 $vApp = (string) (@filemtime(BASE_PATH . '/js/app.js') ?: time());
+$nonce = \App\Core\Security::nonceAttribute();
 $bodyEnd = <<<HTML
 <div id="area-impressao" aria-hidden="true"></div>
-<script src="/legacy/js/layout.js"></script>
-<script src="/legacy/js/barcode.js"></script>
-<script src="/legacy/js/render.js"></script>
-<script src="/legacy/js/tspl.js"></script>
-<script src="/assets/labels-page.js?v={$vPage}"></script>
-<script src="/legacy/js/app.js?v={$vApp}"></script>
+<script{$nonce} src="/legacy/js/layout.js"></script>
+<script{$nonce} src="/legacy/js/barcode.js"></script>
+<script{$nonce} src="/legacy/js/render.js"></script>
+<script{$nonce} src="/legacy/js/tspl.js"></script>
+<script{$nonce} src="/assets/labels-page.js?v={$vPage}"></script>
+<script{$nonce} src="/legacy/js/app.js?v={$vApp}"></script>
 HTML;
 ?>
-<script>
+<script<?= $nonce ?>>
 window.LABELS_CATALOG = <?= json_encode($catalogJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
@@ -212,7 +213,7 @@ window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_
 
       <details class="cartao">
         <summary>Leitor nesta tela (opcional)</summary>
-        <p class="dica">O PDV já registra a venda ao bipar. Use esta área só se quiser conferir a etiqueta nesta página.</p>
+        <p class="dica">Conecte o receptor USB do Knup e bipe a etiqueta 1D. O produto cadastrado aparece aqui. A venda entra no PDV. Este leitor não lê QR Code.</p>
         <div class="campo">
           <label for="campo-leitor">Bipe a etiqueta</label>
           <input type="text" id="campo-leitor" autocomplete="off" spellcheck="false" placeholder="Aguardando a máquina de bipar…" inputmode="none">

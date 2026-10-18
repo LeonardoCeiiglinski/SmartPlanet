@@ -76,9 +76,17 @@ final class UserController
         if ($masterLocked) {
             $role = (int) $existing['role_id'];
         }
-        if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !$role || !$branch || (!$id && strlen($password) < 10)) {
-            Session::flash('erro', 'Preencha nome, e-mail, perfil, filial e senha inicial de ao menos 10 caracteres.');
+        if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !$role || !$branch) {
+            Session::flash('erro', 'Preencha nome, e-mail, perfil, filial e uma senha de 10 a 200 caracteres, com letras e números.');
             View::redirect($id ? '/users/edit?id=' . $id : '/users/new');
+        }
+        if (!$id || $password !== '') {
+            try {
+                \App\Core\Password::assertStrong($password);
+            } catch (\InvalidArgumentException $exception) {
+                Session::flash('erro', $exception->getMessage());
+                View::redirect($id ? '/users/edit?id=' . $id : '/users/new');
+            }
         }
         if (!$masterLocked) {
             $roleName = $pdo->prepare('SELECT name FROM roles WHERE id=:id AND company_id=:company');
@@ -97,13 +105,14 @@ final class UserController
                 ];
                 $set = 'name=:name,email=:email,role_id=:role,branch_id=:branch,active=:active,updated_at=:updated';
                 if ($password !== '') {
-                    if (strlen($password) < 10) {
-                        throw new \InvalidArgumentException('A nova senha deve ter ao menos 10 caracteres.');
-                    }
                     $set .= ',password_hash=:password';
                     $params['password'] = password_hash($password, PASSWORD_DEFAULT);
                 }
                 $pdo->prepare("UPDATE users SET {$set} WHERE id=:id AND company_id=:company")->execute($params);
+                if ($password !== '') {
+                    $pdo->prepare('UPDATE user_sessions SET logged_out_at=:at, last_activity_at=:at WHERE user_id=:user AND logged_out_at IS NULL')
+                        ->execute(['at' => $now, 'user' => $id]);
+                }
             } else {
                 $pdo->prepare(
                     'INSERT INTO users (company_id,branch_id,role_id,name,email,password_hash,active,created_at,updated_at)

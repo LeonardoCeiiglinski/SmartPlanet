@@ -12,15 +12,23 @@
   }
   function add(p,barcode=''){const found=cart.find(i=>i.product_id===Number(p.id));if(found)found.quantity+=1;else cart.push({product_id:Number(p.id),description:p.description,price:number(p.price),quantity:1,discount:0,barcode});render();}
   const escapeHtml=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML;};
-  async function lookup(){
+  function avisar(ok, texto){ if(window.SmartPlanetScanner){ SmartPlanetScanner.beep(ok); SmartPlanetScanner.flash(texto, ok); } }
+  async function lookup(exact){
     const q=search.value.trim(); search.value=''; if(!q||busy)return;
     const now=Date.now(); if(lastScan.value===q&&now-lastScan.at<500)return; lastScan={value:q,at:now}; busy=true;
-    try{const r=await fetch('/api/products/search?q='+encodeURIComponent(q),{headers:{Accept:'application/json'}});const data=await r.json();
-      if(data.items.length===1)add(data.items[0],q);else results.innerHTML=data.items.map((p,n)=>`<button type="button" data-result="${n}">${escapeHtml(p.internal_code+' · '+p.description)} · ${money(number(p.price))}</button>`).join('')||'<span class="muted">Nenhum produto encontrado.</span>';
-      results._items=data.items;
-    }catch(e){results.textContent='Falha na busca.'}finally{busy=false;search.focus();}
+    try{const r=await fetch('/api/products/search?q='+encodeURIComponent(q)+(exact?'&exact=1':''),{headers:{Accept:'application/json'}});const data=await r.json();
+      if(!data.items.length){ results.innerHTML='<span class="muted">Nenhum produto cadastrado para '+escapeHtml(q)+'.</span>'; avisar(false,'Não cadastrado: '+q); }
+      else if(data.items.length===1){ add(data.items[0],q); results.innerHTML=''; avisar(true,data.items[0].description+' no carrinho'); }
+      else { results.innerHTML=data.items.map((p,n)=>`<button type="button" data-result="${n}">${escapeHtml(p.internal_code+' · '+p.description)} · ${money(number(p.price))}</button>`).join(''); results._items=data.items; if(window.SmartPlanetScanner) SmartPlanetScanner.flash('Escolha o produto para '+q, null); }
+    }catch(e){results.textContent='Falha na busca.'; avisar(false,'Falha ao consultar o código');}finally{busy=false;search.focus();}
   }
-  search.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();lookup();}});
+  search.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();lookup(false);}},posSignal);
+  document.addEventListener('smartplanet:scan',e=>{
+    if(!document.querySelector('#pos-app'))return;
+    e.preventDefault();
+    search.value=e.detail.code;
+    lookup(true);
+  },posSignal);
   results.addEventListener('click',e=>{const b=e.target.closest('[data-result]');if(b){add(results._items[Number(b.dataset.result)]);results.innerHTML='';search.focus();}});
   cartBody.addEventListener('change',e=>{const n=Number(e.target.dataset.n);if(e.target.classList.contains('cart-qty'))cart[n].quantity=Math.max(.001,number(e.target.value));if(e.target.classList.contains('cart-discount'))cart[n].discount=Math.max(0,number(e.target.value));render();search.focus();});
   cartBody.addEventListener('click',e=>{const b=e.target.closest('.cart-remove');if(b){cart.splice(Number(b.dataset.n),1);render();search.focus();}});

@@ -18,7 +18,7 @@ final class Session
             'path' => '/',
             'secure' => Env::bool('SESSION_SECURE', Paths::isHttps()),
             'httponly' => true,
-            'samesite' => 'Lax',
+            'samesite' => 'Strict',
         ]);
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
@@ -32,10 +32,16 @@ final class Session
         session_start();
 
         $now = time();
-        $idle = Env::int('SESSION_IDLE_MINUTES', 120) * 60;
-        if (isset($_SESSION['_last_activity']) && $now - (int) $_SESSION['_last_activity'] > $idle) {
+        $idle = Env::int('SESSION_IDLE_MINUTES', 30) * 60;
+        $absolute = Env::int('SESSION_ABSOLUTE_HOURS', 12) * 3600;
+        $expired = (isset($_SESSION['_last_activity']) && $now - (int) $_SESSION['_last_activity'] > $idle)
+            || (isset($_SESSION['_started_at']) && $now - (int) $_SESSION['_started_at'] > $absolute);
+        if ($expired) {
             self::destroy();
             session_start();
+        }
+        if (!isset($_SESSION['_started_at'])) {
+            $_SESSION['_started_at'] = $now;
         }
         $_SESSION['_last_activity'] = $now;
     }

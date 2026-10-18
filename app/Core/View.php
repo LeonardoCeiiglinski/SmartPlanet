@@ -13,6 +13,10 @@ final class View
         if (!is_file($file)) {
             throw new \RuntimeException("View não encontrada: {$template}");
         }
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, no-cache, must-revalidate, private');
+            header('Pragma: no-cache');
+        }
         extract($data, EXTR_SKIP);
         ob_start();
         require $file;
@@ -26,6 +30,7 @@ final class View
     {
         http_response_code($status);
         header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store, private');
         echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         exit;
     }

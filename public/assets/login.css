@@ -1,0 +1,98 @@
+.guest-page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px 16px;
+  background:
+    radial-gradient(900px 420px at 50% -10%, rgba(232, 197, 107, .18), transparent 60%),
+    #070707;
+}
+.vault {
+  width: min(440px, 100%);
+  background: #101010;
+  color: #f7f1e4;
+  border: 1px solid rgba(232, 197, 107, .7);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+  padding: 28px 26px 22px;
+}
+.vault-logo {
+  width: 92px;
+  height: 92px;
+  display: block;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--gold);
+}
+.vault h1, .vault h2 {
+  margin: 0;
+  text-align: center;
+  color: var(--gold);
+  font-size: 26px;
+}
+.vault-kicker {
+  margin: 0;
+  text-align: center;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: #f3e6c4;
+}
+.vault-lead, .vault .muted {
+  color: #c8bfae;
+  text-align: center;
+}
+.vault form { margin-top: 18px; }
+.vault label { color: #f7f1e4; }
+.vault input {
+  width: 100%;
+  background: #1a1a1a;
+  color: #fff;
+  border: 1px solid #3a3326;
+  border-radius: 3px;
+  padding: 10px 12px;
+}
+.vault input:focus {
+  outline: 2px solid var(--gold);
+  border-color: var(--gold);
+}
+.vault-password { display: flex; gap: 8px; }
+.vault-password input { flex: 1; }
+.vault-password button {
+  border-color: #3a3326;
+  background: #1a1a1a;
+  color: var(--gold);
+}
+.vault .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.vault button.primary { width: 100%; padding: 11px 14px; }
+.vault a { color: var(--gold); }
+.vault-rules {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #c8bfae;
+  font-size: 12px;
+}
+.vault-rules li { padding: 4px 0 4px 18px; position: relative; }
+.vault-rules li::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  position: absolute;
+  left: 0;
+  top: 9px;
+}
+.vault-trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.vault .flash { text-align: left; }

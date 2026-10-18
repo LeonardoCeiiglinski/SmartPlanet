@@ -35,6 +35,20 @@ ini_set('display_errors', Env::bool('APP_DEBUG', false) ? '1' : '0');
 ini_set('log_errors', '1');
 ini_set('error_log', \App\Core\Paths::writable('logs/php-error.log'));
 
+set_exception_handler(static function (Throwable $exception): void {
+    error_log((string) $exception);
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: text/html; charset=UTF-8');
+        header('Content-Disposition: inline');
+    }
+    $message = Env::bool('APP_DEBUG', false)
+        ? htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8')
+        : 'Ocorreu um erro interno. A operação não foi concluída.';
+    echo '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Erro</title>';
+    echo '<body><h1>Erro interno</h1><p>' . $message . '</p></body></html>';
+});
+
 if (Env::get('APP_URL') === null && Env::get('VERCEL_URL')) {
     putenv('APP_URL=https://' . Env::get('VERCEL_URL'));
     $_ENV['APP_URL'] = 'https://' . Env::get('VERCEL_URL');
@@ -43,18 +57,6 @@ if (Env::get('APP_URL') === null && Env::get('VERCEL_URL')) {
 Database::configure();
 if (PHP_SAPI !== 'cli') {
     \App\Setup\Runtime::bootDatabase();
+    \App\Core\Security::sendHeaders();
 }
 Session::start();
-
-set_exception_handler(static function (Throwable $exception): void {
-    error_log((string) $exception);
-    if (!headers_sent()) {
-        http_response_code(500);
-        header('Content-Type: text/html; charset=UTF-8');
-    }
-    $message = Env::bool('APP_DEBUG', false)
-        ? htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8')
-        : 'Ocorreu um erro interno. A operação não foi concluída.';
-    echo '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Erro</title>';
-    echo '<body><h1>Erro interno</h1><p>' . $message . '</p></body></html>';
-});

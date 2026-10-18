@@ -2,7 +2,16 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/app/bootstrap.php';
+$bootstrap = dirname(__DIR__) . '/app/bootstrap.php';
+if (!is_file($bootstrap)) {
+    http_response_code(500);
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Content-Disposition: inline');
+    echo '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>SmartPlanet</title><body><h1>O sistema não abriu</h1><p>A Vercel está publicando só a pasta public, então o navegador recebia o programa em vez da página. Em Settings → General → Root Directory, apague public, salve e faça Redeploy.</p></body></html>';
+    exit;
+}
+header('Content-Disposition: inline');
+require $bootstrap;
 
 use App\Core\Auth;
 use App\Core\Csrf;

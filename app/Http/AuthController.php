@@ -9,6 +9,7 @@ use App\Core\Auth;
 use App\Core\Csrf;
 use App\Core\Database;
 use App\Core\Env;
+use App\Core\Password;
 use App\Core\Session;
 use App\Core\View;
 
@@ -27,6 +28,10 @@ final class AuthController
         Csrf::enforce();
         $email = trim((string) ($_POST['email'] ?? ''));
         $password = (string) ($_POST['password'] ?? '');
+        if (trim((string) ($_POST['sp_hp'] ?? '')) !== '') {
+            Session::flash('erro', 'E-mail ou senha inválidos.');
+            View::redirect('/login');
+        }
         try {
             if (Auth::attempt($email, $password, $_SERVER['REMOTE_ADDR'] ?? 'unknown')) {
                 View::redirect('/', 'sucesso', 'Acesso realizado.');
@@ -72,12 +77,14 @@ final class AuthController
                 'expires' => date('Y-m-d H:i:s', time() + 3600),
                 'created' => date('Y-m-d H:i:s'),
             ]);
-            $url = rtrim(Env::get('APP_URL', 'http://localhost:8080') ?? '', '/') . '/reset?token=' . urlencode($token);
-            file_put_contents(
-                \App\Core\Paths::writable('logs/mail.log'),
-                sprintf("[%s] Recuperação para %s: %s\n", date('c'), $email, $url),
-                FILE_APPEND | LOCK_EX
-            );
+            if (Env::bool('APP_DEBUG', false)) {
+                $url = rtrim(Env::get('APP_URL', 'http://localhost:8080') ?? '', '/') . '/reset?token=' . urlencode($token);
+                file_put_contents(
+                    \App\Core\Paths::writable('logs/mail.log'),
+                    sprintf("[%s] Recuperação para %s: %s\n", date('c'), $email, $url),
+                    FILE_APPEND | LOCK_EX
+                );
+            }
         }
         Session::flash('sucesso', 'Se o e-mail estiver cadastrado, as instruções foram enviadas.');
         View::redirect('/forgot');
@@ -97,8 +104,14 @@ final class AuthController
         $token = (string) ($_POST['token'] ?? '');
         $password = (string) ($_POST['password'] ?? '');
         $confirmation = (string) ($_POST['password_confirmation'] ?? '');
-        if (strlen($password) < 10 || $password !== $confirmation) {
-            Session::flash('erro', 'As senhas devem coincidir e ter ao menos 10 caracteres.');
+        try {
+            Password::assertStrong($password);
+        } catch (\InvalidArgumentException $exception) {
+            Session::flash('erro', $exception->getMessage());
+            View::redirect('/reset?token=' . urlencode($token));
+        }
+        if ($password !== $confirmation) {
+            Session::flash('erro', 'As senhas devem coincidir.');
             View::redirect('/reset?token=' . urlencode($token));
         }
         $pdo = Database::connection();
@@ -122,6 +135,10 @@ final class AuthController
                 'at' => date('Y-m-d H:i:s'),
                 'id' => $reset['id'],
             ]);
+            $pdo->prepare(
+                'UPDATE user_sessions SET logged_out_at = :at, last_activity_at = :at
+                 WHERE user_id = :user AND logged_out_at IS NULL'
+            )->execute(['at' => date('Y-m-d H:i:s'), 'user' => $reset['user_id']]);
             Audit::log('auth.password_reset', 'users', (int) $reset['user_id']);
         });
         Session::flash('sucesso', 'Senha alterada. Entre novamente.');

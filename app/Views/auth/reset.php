@@ -3,6 +3,7 @@
 use App\Core\Csrf;
 use App\Core\View;
 ?>
+<p class="vault-kicker">Nova senha</p>
 <h2>Definir nova senha</h2>
 <form method="post" action="/reset">
   <?= Csrf::field() ?>
