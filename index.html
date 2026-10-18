@@ -3,14 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Etiquetas 33 × 21 mm</title>
+  <title>SmartPlanet · Etiquetas 33 × 21 mm</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/styles.css">
   <style id="estilo-pagina">@page { size: 104mm 21mm; margin: 0; }</style>
 </head>
 <body>
   <header class="topo">
-    <h1>Etiquetas de produtos · 33 × 21 mm</h1>
-    <p>Bobina de 3 colunas · 4BARCODE 4B-2054N / Tomate MDK-2054N</p>
+    <h1>SmartPlanet · Etiquetas 33 × 21 mm</h1>
+    <p>a Boutique do Celular · bobina de 3 colunas</p>
   </header>
 
   <div id="aviso-armazenamento" class="aviso-armazenamento" hidden>
@@ -25,24 +26,24 @@
         <form id="form-produto" novalidate autocomplete="off">
           <div class="campo">
             <label for="campo-nome">Nome do produto</label>
-            <input type="text" id="campo-nome" maxlength="120" required>
+            <input type="text" id="campo-nome" maxlength="120" required placeholder="Ex.: Camiseta básica masculina">
             <span class="erro" data-erro="nome"></span>
           </div>
           <div class="linha-campos">
             <div class="campo">
               <label for="campo-preco">Preço</label>
-              <div class="prefixo"><span>R$</span><input type="text" id="campo-preco" inputmode="decimal" placeholder="0,00" required></div>
+              <div class="prefixo"><span>R$</span><input type="text" id="campo-preco" inputmode="decimal" placeholder="Ex.: 49,90" required></div>
               <span class="erro" data-erro="preco"></span>
             </div>
             <div class="campo">
               <label for="campo-quantidade">Quantidade de etiquetas</label>
-              <input type="number" id="campo-quantidade" min="1" max="9999" step="1" inputmode="numeric" required>
+              <input type="number" id="campo-quantidade" min="1" max="9999" step="1" inputmode="numeric" required placeholder="Ex.: 9">
               <span class="erro" data-erro="quantidade"></span>
             </div>
           </div>
           <div class="campo">
             <label for="campo-codigo">Código de barras <span class="dica">(necessário para a máquina de bipar reconhecer o produto)</span></label>
-            <input type="text" id="campo-codigo" maxlength="24" inputmode="text" spellcheck="false">
+            <input type="text" id="campo-codigo" maxlength="24" inputmode="text" spellcheck="false" placeholder="Ex.: 7891234567895">
             <span class="dica" id="dica-codigo">EAN-13 e UPC-A são reconhecidos automaticamente; outros códigos usam Code 128.</span>
             <span class="erro" data-erro="codigo"></span>
           </div>
@@ -75,8 +76,8 @@
             <button type="button" id="botao-baixar-prn">Baixar arquivo .prn</button>
           </div>
           <div class="grade-config" style="margin-top:12px">
-            <div class="campo"><label for="cfg-tsplVelocidade">Velocidade (1–6)</label><input type="number" id="cfg-tsplVelocidade" data-cfg="tsplVelocidade" step="1"></div>
-            <div class="campo"><label for="cfg-tsplDensidade">Escurecimento (0–15)</label><input type="number" id="cfg-tsplDensidade" data-cfg="tsplDensidade" step="1"></div>
+            <div class="campo"><label for="cfg-tsplVelocidade">Velocidade (1–6)</label><input type="number" id="cfg-tsplVelocidade" data-cfg="tsplVelocidade" step="1" placeholder="Ex.: 4"></div>
+            <div class="campo"><label for="cfg-tsplDensidade">Escurecimento (0–15)</label><input type="number" id="cfg-tsplDensidade" data-cfg="tsplDensidade" step="1" placeholder="Ex.: 8"></div>
           </div>
           <label class="caixa-marcar"><input type="checkbox" id="cfg-tsplGirar" data-cfg="tsplGirar"> Girar 180° (se a etiqueta sair de cabeça para baixo)</label>
           <label class="caixa-marcar"><input type="checkbox" id="cfg-tsplInverter" data-cfg="tsplInverter"> Inverter cores (se sair tudo preto com o texto em branco)</label>
@@ -128,15 +129,15 @@
               <option value="continuo">Página contínua (todas as fileiras em uma página)</option>
             </select>
           </div>
-          <div class="campo inteira"><label for="cfg-larguraPagina">Largura da página / área de impressão (mm)</label><input type="number" id="cfg-larguraPagina" data-cfg="larguraPagina" step="0.5"><span class="dica">As 3 colunas ficam centralizadas nesta largura, como a bobina nas guias da impressora. 4B-2054N: 104 mm.</span></div>
-          <div class="campo"><label for="cfg-espacoHorizontal">Espaço entre colunas (mm)</label><input type="number" id="cfg-espacoHorizontal" data-cfg="espacoHorizontal" step="0.1"></div>
-          <div class="campo"><label for="cfg-espacoVertical">Espaço entre fileiras (mm)</label><input type="number" id="cfg-espacoVertical" data-cfg="espacoVertical" step="0.1"><span class="dica">Gap da bobina (impressão direta e modo contínuo).</span></div>
-          <div class="campo"><label for="cfg-deslocX">Deslocamento horizontal (mm)</label><input type="number" id="cfg-deslocX" data-cfg="deslocX" step="0.1"><span class="dica">Negativo = esquerda.</span></div>
-          <div class="campo"><label for="cfg-deslocY">Deslocamento vertical (mm)</label><input type="number" id="cfg-deslocY" data-cfg="deslocY" step="0.1"><span class="dica">Negativo = para cima.</span></div>
+          <div class="campo inteira"><label for="cfg-larguraPagina">Largura da página / área de impressão (mm)</label><input type="number" id="cfg-larguraPagina" data-cfg="larguraPagina" step="0.5" placeholder="Ex.: 104"><span class="dica">As 3 colunas ficam centralizadas nesta largura, como a bobina nas guias da impressora. 4B-2054N: 104 mm.</span></div>
+          <div class="campo"><label for="cfg-espacoHorizontal">Espaço entre colunas (mm)</label><input type="number" id="cfg-espacoHorizontal" data-cfg="espacoHorizontal" step="0.1" placeholder="Ex.: 3"></div>
+          <div class="campo"><label for="cfg-espacoVertical">Espaço entre fileiras (mm)</label><input type="number" id="cfg-espacoVertical" data-cfg="espacoVertical" step="0.1" placeholder="Ex.: 3"><span class="dica">Gap da bobina (impressão direta e modo contínuo).</span></div>
+          <div class="campo"><label for="cfg-deslocX">Deslocamento horizontal (mm)</label><input type="number" id="cfg-deslocX" data-cfg="deslocX" step="0.1" placeholder="Ex.: 0"><span class="dica">Negativo = esquerda.</span></div>
+          <div class="campo"><label for="cfg-deslocY">Deslocamento vertical (mm)</label><input type="number" id="cfg-deslocY" data-cfg="deslocY" step="0.1" placeholder="Ex.: 0"><span class="dica">Negativo = para cima.</span></div>
         </div>
         <div class="grade-config" data-metodo="navegador">
-          <div class="campo"><label for="cfg-margemSuperior">Margem superior (mm)</label><input type="number" id="cfg-margemSuperior" data-cfg="margemSuperior" step="0.1"></div>
-          <div class="campo"><label for="cfg-margemInferior">Margem inferior (mm)</label><input type="number" id="cfg-margemInferior" data-cfg="margemInferior" step="0.1"></div>
+          <div class="campo"><label for="cfg-margemSuperior">Margem superior (mm)</label><input type="number" id="cfg-margemSuperior" data-cfg="margemSuperior" step="0.1" placeholder="Ex.: 0"></div>
+          <div class="campo"><label for="cfg-margemInferior">Margem inferior (mm)</label><input type="number" id="cfg-margemInferior" data-cfg="margemInferior" step="0.1" placeholder="Ex.: 0"></div>
         </div>
         <label class="caixa-marcar"><input type="checkbox" id="cfg-novaFileiraPorProduto" data-cfg="novaFileiraPorProduto"> Começar cada produto em uma nova fileira</label>
 
@@ -148,11 +149,11 @@
 
         <h3>Conteúdo da etiqueta</h3>
         <div class="grade-config">
-          <div class="campo"><label for="cfg-fonteNome">Tamanho máx. do nome (pt)</label><input type="number" id="cfg-fonteNome" data-cfg="fonteNome" step="0.5"></div>
-          <div class="campo"><label for="cfg-fontePreco">Tamanho do preço (pt)</label><input type="number" id="cfg-fontePreco" data-cfg="fontePreco" step="0.5"></div>
-          <div class="campo"><label for="cfg-alturaCodigo">Altura do código de barras (mm)</label><input type="number" id="cfg-alturaCodigo" data-cfg="alturaCodigo" step="0.5"></div>
-          <div class="campo"><label for="cfg-larguraCodigo">Largura máx. do código (%)</label><input type="number" id="cfg-larguraCodigo" data-cfg="larguraCodigo" step="5"></div>
-          <div class="campo"><label for="cfg-margemInterna">Margem interna da etiqueta (mm)</label><input type="number" id="cfg-margemInterna" data-cfg="margemInterna" step="0.1"></div>
+          <div class="campo"><label for="cfg-fonteNome">Tamanho máx. do nome (pt)</label><input type="number" id="cfg-fonteNome" data-cfg="fonteNome" step="0.5" placeholder="Ex.: 7"></div>
+          <div class="campo"><label for="cfg-fontePreco">Tamanho do preço (pt)</label><input type="number" id="cfg-fontePreco" data-cfg="fontePreco" step="0.5" placeholder="Ex.: 8"></div>
+          <div class="campo"><label for="cfg-alturaCodigo">Altura do código de barras (mm)</label><input type="number" id="cfg-alturaCodigo" data-cfg="alturaCodigo" step="0.5" placeholder="Ex.: 8"></div>
+          <div class="campo"><label for="cfg-larguraCodigo">Largura máx. do código (%)</label><input type="number" id="cfg-larguraCodigo" data-cfg="larguraCodigo" step="5" placeholder="Ex.: 90"></div>
+          <div class="campo"><label for="cfg-margemInterna">Margem interna da etiqueta (mm)</label><input type="number" id="cfg-margemInterna" data-cfg="margemInterna" step="0.1" placeholder="Ex.: 1"></div>
           <div class="campo">
             <label for="cfg-alinhamentoTexto">Alinhamento do texto</label>
             <select id="cfg-alinhamentoTexto" data-cfg="alinhamentoTexto">
@@ -286,6 +287,7 @@
 
   <div id="area-impressao" aria-hidden="true"></div>
 
+  <script src="js/forms.js"></script>
   <script src="js/layout.js"></script>
   <script src="js/barcode.js"></script>
   <script src="js/render.js"></script>

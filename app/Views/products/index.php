@@ -16,7 +16,7 @@ use App\Core\View;
     <form method="get" action="/products" class="filters">
       <div class="field">
         <label for="q">Descrição, código interno ou código de barras</label>
-        <input type="text" id="q" name="q" value="<?= View::e($search) ?>">
+        <input type="text" id="q" name="q" value="<?= View::e($search) ?>" placeholder="Digite para pesquisar...">
       </div>
       <button type="submit">Pesquisar</button>
       <?php if ($search !== ''): ?><a class="button" href="/products">Limpar</a><?php endif; ?>
@@ -38,9 +38,9 @@ use App\Core\View;
             <td>
               <div class="actions">
                 <?php if (Auth::can('products.manage')): ?><a class="button small" href="/products/edit?id=<?= (int) $product['id'] ?>">Editar</a><?php endif; ?>
-                <?php if (Auth::can('labels.print')): ?><a class="button small" href="/labels?product=<?= (int) $product['id'] ?>">Etiqueta</a><?php endif; ?>
+                <?php if (Auth::can('labels.print') && $product['active']): ?><a class="button small" href="/labels?product=<?= (int) $product['id'] ?>&amp;qty=9">Etiqueta</a><?php endif; ?>
                 <?php if (Auth::can('products.manage')): ?>
-                  <form method="post" action="/products/status">
+                  <form method="post" action="/products/status"<?php if ($product['active']): ?> data-confirm-twice="inativar" data-confirm-item="<?= View::e($product['description']) ?>"<?php endif; ?>>
                     <?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int) $product['id'] ?>">
                     <input type="hidden" name="active" value="<?= $product['active'] ? '0' : '1' ?>">
                     <button class="small" type="submit"><?= $product['active'] ? 'Inativar' : 'Ativar' ?></button>

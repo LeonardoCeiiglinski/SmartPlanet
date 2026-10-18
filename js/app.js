@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  if (window.__labelsAbort) window.__labelsAbort.abort();
+  const labelsAbort = new AbortController();
+  window.__labelsAbort = labelsAbort;
+  const labelsSignal = { signal: labelsAbort.signal };
+
   const L = window.EtqLayout;
   const B = window.EtqBarcode;
   const R = window.EtqRender;
@@ -16,6 +21,17 @@
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  function confirmarDuasVezes(opts) {
+    if (window.SmartPlanetForms && typeof window.SmartPlanetForms.confirmTwice === 'function') {
+      return window.SmartPlanetForms.confirmTwice(opts);
+    }
+    const item = opts.count > 1 ? `${opts.count} registros selecionados` : `“${opts.item}”`;
+    return Promise.resolve(
+      window.confirm(`Deseja realmente excluir este registro?\n\n${item}. Esta operação poderá ser irreversível.`) &&
+      window.confirm(`Confirme novamente a exclusão.\n\n${item}. A exclusão será executada após esta confirmação.`)
+    );
+  }
 
   /* ---------- Armazenamento local ---------- */
 
@@ -172,14 +188,24 @@
     return ok ? { nome, precoCentavos: preco, codigo, quantidade: qtd } : null;
   }
 
+  function dialogoEtiqueta() {
+    return document.getElementById('dialogo-etiqueta');
+  }
+
+  function fecharDialogoEtiqueta() {
+    const dialogo = dialogoEtiqueta();
+    if (dialogo && dialogo.open) dialogo.close();
+  }
+
   function limparFormulario() {
     form.reset();
     estado.editandoId = null;
     Object.keys(camposPorNome).forEach((c) => mostrarErro(c, ''));
-    $('#botao-adicionar').textContent = 'Adicionar produto';
-    $('#titulo-form').textContent = 'Cadastrar produto';
+    $('#botao-adicionar').textContent = 'Adicionar à impressão';
+    $('#titulo-form').textContent = 'Editar etiqueta';
     atualizarDicaCodigo();
     renderizarLista();
+    fecharDialogoEtiqueta();
   }
 
   function editarProduto(id) {
@@ -193,9 +219,16 @@
     Object.keys(camposPorNome).forEach((c) => mostrarErro(c, ''));
     atualizarDicaCodigo();
     $('#botao-adicionar').textContent = 'Salvar alterações';
-    $('#titulo-form').textContent = 'Editar produto';
+    $('#titulo-form').textContent = 'Editar etiqueta';
     renderizarLista();
-    campoNome.focus();
+    const dialogo = dialogoEtiqueta();
+    if (dialogo && typeof dialogo.showModal === 'function') {
+      if (!dialogo.open) dialogo.showModal();
+      campoQtd.focus();
+      campoQtd.select();
+      return;
+    }
+    campoQtd.focus();
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -209,10 +242,18 @@
     if (estado.editandoId) {
       const p = estado.produtos.find((x) => x.id === estado.editandoId);
       if (p) Object.assign(p, dados);
-      status(`Produto “${dados.nome}” atualizado.`);
+      status(`Etiqueta de “${dados.nome}” atualizada.`);
     } else {
-      estado.produtos.push({ id: novoId(), selecionado: true, ...dados });
-      status(`Produto “${dados.nome}” adicionado com ${plural(dados.quantidade, 'etiqueta', 'etiquetas')}.`);
+      const existente = estado.produtos.find((x) => (
+        (dados.codigo && x.codigo === dados.codigo) || (!dados.codigo && x.nome === dados.nome)
+      ));
+      if (existente) {
+        Object.assign(existente, dados, { selecionado: true });
+        status(`Fila de “${dados.nome}” atualizada para ${plural(dados.quantidade, 'etiqueta', 'etiquetas')}.`);
+      } else {
+        estado.produtos.push({ id: novoId(), selecionado: true, ...dados });
+        status(`“${dados.nome}” adicionado com ${plural(dados.quantidade, 'etiqueta', 'etiquetas')}.`);
+      }
     }
     salvarProdutos();
     limparFormulario();
@@ -292,8 +333,9 @@
       });
       const bExcluir = el('button', 'pequeno perigo', 'Excluir');
       bExcluir.type = 'button';
-      bExcluir.addEventListener('click', () => {
-        if (!confirm(`Excluir “${p.nome}”?`)) return;
+      bExcluir.addEventListener('click', async () => {
+        const ok = await confirmarDuasVezes({ kind: 'excluir', item: p.nome });
+        if (!ok) return;
         estado.produtos = estado.produtos.filter((x) => x.id !== p.id);
         if (estado.editandoId === p.id) limparFormulario();
         salvarProdutos();
@@ -340,9 +382,14 @@
     renderizarTudo();
   });
 
-  $('#botao-remover-todos').addEventListener('click', () => {
+  $('#botao-remover-todos').addEventListener('click', async () => {
     if (!estado.produtos.length) return;
-    if (!confirm(`Remover todos os ${estado.produtos.length} produtos cadastrados? Esta ação não pode ser desfeita.`)) return;
+    const ok = await confirmarDuasVezes({
+      kind: 'limpar',
+      item: 'toda a fila de impressão',
+      count: estado.produtos.length,
+    });
+    if (!ok) return;
     estado.produtos = [];
     salvarProdutos();
     limparFormulario();
@@ -601,10 +648,10 @@
     if (estado.impressaoPreparada) return;
     const { fileiras } = L.montarFileiras(produtosDoEscopo(), estado.config);
     prepararImpressao(fileiras);
-  });
+  }, labelsSignal);
   window.addEventListener('afterprint', () => {
     estado.impressaoPreparada = false;
-  });
+  }, labelsSignal);
 
   /* ---------- Leitor de código de barras ---------- */
 
@@ -708,6 +755,7 @@
   let ultimoToque = 0;
   let rajadaRapida = false;
   document.addEventListener('keydown', (evento) => {
+    if (!document.getElementById('form-produto')) return;
     if (evento.ctrlKey || evento.altKey || evento.metaKey || evento.isComposing) return;
     const agora = performance.now();
     if (evento.key === 'Enter' || evento.key === 'Tab') {
@@ -737,7 +785,7 @@
     bufferLeitor += evento.key;
     ultimoToque = agora;
     if (bufferLeitor.length > B.LIMITE) bufferLeitor = bufferLeitor.slice(-B.LIMITE);
-  }, true);
+  }, { capture: true, signal: labelsAbort.signal });
 
   campoLeitor.addEventListener('keydown', (evento) => {
     if (evento.key === 'Enter') {
@@ -746,10 +794,15 @@
     }
   });
 
-  $('#botao-limpar-leituras').addEventListener('click', () => {
+  $('#botao-limpar-leituras').addEventListener('click', async () => {
     const deHoje = estado.leituras.filter((l) => ehHoje(l.quando)).length;
     if (!deHoje) return;
-    if (!confirm(`Apagar os ${deHoje} registros de leitura de hoje?`)) return;
+    const ok = await confirmarDuasVezes({
+      kind: 'limpar',
+      item: 'registros de leitura de hoje',
+      count: deHoje,
+    });
+    if (!ok) return;
     estado.leituras = estado.leituras.filter((l) => !ehHoje(l.quando));
     salvarLeituras();
     mostrarResultado('', 'Registros de hoje apagados. Bipe uma etiqueta para registrar o produto.');
@@ -770,7 +823,7 @@
   atualizarConexao();
   if (T.usbDisponivel()) {
     T.conectar(false).then(atualizarConexao, atualizarConexao);
-    navigator.usb.addEventListener('disconnect', () => setTimeout(atualizarConexao, 0));
+    navigator.usb.addEventListener('disconnect', () => setTimeout(atualizarConexao, 0), labelsSignal);
   }
   atualizarDicaCodigo();
   renderizarTudo();

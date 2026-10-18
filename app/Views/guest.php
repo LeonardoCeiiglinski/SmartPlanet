@@ -8,17 +8,20 @@ use App\Core\View;
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= View::e($title ?? 'Acesso') ?> · ERP PDV</title>
+  <title><?= View::e($title ?? 'Acesso') ?> · SmartPlanet</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/assets/erp.css">
 </head>
 <body class="guest-page">
   <main class="guest-box">
-    <h1>ERP PDV</h1>
+    <img class="guest-logo" src="/assets/logo-smartplanet.png" alt="SmartPlanet, a Boutique do Celular">
     <?php foreach (Session::consumeFlash() as $flash): ?>
       <div class="flash <?= View::e($flash['type']) ?>"><?= View::e($flash['message']) ?></div>
     <?php endforeach; ?>
     <?= $content ?>
   </main>
+  <script src="/assets/forms.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/forms.js') ?: time()) ?>"></script>
 </body>
 </html>
 

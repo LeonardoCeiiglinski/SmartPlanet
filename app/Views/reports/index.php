@@ -1,8 +1,8 @@
 <?php use App\Core\View; ?>
 <div class="page-header"><h1>Relatórios</h1></div>
 <form class="panel" method="get" action="/reports"><div class="panel-body grid three">
-  <div class="field"><label>De</label><input type="date" name="from" value="<?= View::e($from) ?>"></div>
-  <div class="field"><label>Até</label><input type="date" name="to" value="<?= View::e($to) ?>"></div>
+  <div class="field"><label>De</label><input type="date" name="from" value="<?= View::e($from) ?>" title="Selecione a data inicial. Ex.: <?= date('d/m/Y', strtotime('-30 days')) ?>"></div>
+  <div class="field"><label>Até</label><input type="date" name="to" value="<?= View::e($to) ?>" title="Selecione a data final. Ex.: <?= date('d/m/Y') ?>"></div>
   <div class="field"><label>&nbsp;</label><button class="primary">Filtrar</button> <a class="button" href="/reports?from=<?= View::e($from) ?>&amp;to=<?= View::e($to) ?>&amp;export=csv">Exportar CSV</a></div>
 </div></form>
 <div class="panel"><div class="panel-header">Vendas por dia</div><div class="panel-body table-wrap"><table><thead><tr><th>Dia</th><th class="num">Qtd.</th><th class="num">Total</th></tr></thead><tbody><?php foreach ($sales as $r): ?><tr><td><?= View::e($r['day']) ?></td><td class="num"><?= (int) $r['qty'] ?></td><td class="num">R$ <?= number_format((float) $r['total'], 2, ',', '.') ?></td></tr><?php endforeach ?></tbody></table></div></div>

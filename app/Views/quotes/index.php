@@ -7,15 +7,15 @@
   <div class="panel-body">
     <div class="grid three">
       <div class="field"><label>Cliente</label><select name="customer_id"><option value="">Consumidor final</option><?php foreach ($customers as $c): ?><option value="<?= (int) $c['id'] ?>"><?= View::e($c['name']) ?></option><?php endforeach ?></select></div>
-      <div class="field"><label>Validade</label><input type="date" name="valid_until"></div>
-      <div class="field"><label>Observação</label><input name="notes"></div>
+      <div class="field"><label>Validade</label><input type="date" name="valid_until" title="Ex.: <?= date('d/m/Y', strtotime('+7 days')) ?>"></div>
+      <div class="field"><label>Observação</label><input name="notes" placeholder="Ex.: Orçamento válido somente com peça em estoque"></div>
     </div>
     <table><thead><tr><th>Produto</th><th>Qtd.</th><th>Desconto</th></tr></thead><tbody>
       <?php for ($i = 0; $i < 4; $i++): ?>
       <tr>
-        <td><select name="items[<?= $i ?>][product_id]"><option value="">—</option><?php foreach ($products as $p): ?><option value="<?= (int) $p['id'] ?>"><?= View::e($p['description']) ?> · R$ <?= number_format((float) $p['sale_price'], 2, ',', '.') ?></option><?php endforeach ?></select></td>
-        <td><input name="items[<?= $i ?>][quantity]" value="<?= $i === 0 ? '1' : '' ?>"></td>
-        <td><input name="items[<?= $i ?>][discount]" value="0"></td>
+        <td><select name="items[<?= $i ?>][product_id]"><option value="">Selecione uma opção...</option><?php foreach ($products as $p): ?><option value="<?= (int) $p['id'] ?>"><?= View::e($p['description']) ?> · R$ <?= number_format((float) $p['sale_price'], 2, ',', '.') ?></option><?php endforeach ?></select></td>
+        <td><input name="items[<?= $i ?>][quantity]" value="<?= $i === 0 ? '1' : '' ?>" placeholder="Ex.: 1"></td>
+        <td><input name="items[<?= $i ?>][discount]" data-mask="money" value="0" placeholder="Ex.: 10,00"></td>
       </tr>
       <?php endfor ?>
     </tbody></table>
@@ -32,7 +32,7 @@
     <input type="hidden" name="quote_id" value="<?= (int) $detail['id'] ?>">
     <input type="hidden" name="idempotency_key" value="quote-<?= (int) $detail['id'] ?>-<?= View::e(bin2hex(random_bytes(4))) ?>">
     <div class="grid two"><div class="field"><label>Pagamento</label><select name="method_id"><?php foreach ($methods as $m): ?><option value="<?= (int) $m['id'] ?>"><?= View::e($m['name']) ?></option><?php endforeach ?></select></div>
-    <div class="field"><label>Valor</label><input name="amount" value="<?= View::e(number_format((float) $detail['total'], 2, ',', '.')) ?>"></div></div>
+    <div class="field"><label>Valor</label><input name="amount" data-mask="money" value="<?= View::e(number_format((float) $detail['total'], 2, ',', '.')) ?>" placeholder="Ex.: 150,00"></div></div>
     <button class="primary">Converter em venda</button>
   </form>
   <?php endif ?>

@@ -8,12 +8,12 @@
 <form method="post" action="/finance/create" class="panel"><?= Csrf::field() ?>
   <div class="panel-header">Novo lançamento</div>
   <div class="panel-body grid three">
-    <div class="field"><label>Direção</label><select name="direction"><option value="in">Receita / a receber</option><option value="out">Despesa / a pagar</option></select></div>
-    <div class="field"><label>Descrição</label><input name="description" required></div>
-    <div class="field"><label>Valor</label><input name="amount" required></div>
-    <div class="field"><label>Emissão</label><input type="date" name="issue_date" value="<?= date('Y-m-d') ?>"></div>
-    <div class="field"><label>Vencimento</label><input type="date" name="due_date" value="<?= date('Y-m-d') ?>"></div>
-    <div class="field"><label>Cliente/fornecedor</label><select name="party_id"><option value="">—</option><?php foreach ($customers as $c): ?><option value="<?= (int) $c['id'] ?>">Cliente: <?= View::e($c['name']) ?></option><?php endforeach ?><?php foreach ($suppliers as $s): ?><option value="<?= (int) $s['id'] ?>">Fornecedor: <?= View::e($s['name']) ?></option><?php endforeach ?></select></div>
+    <div class="field"><label>Direção</label><select name="direction" required><option value="">Selecione uma opção...</option><option value="in">Receita / a receber</option><option value="out">Despesa / a pagar</option></select></div>
+    <div class="field"><label>Descrição</label><input name="description" required placeholder="Ex.: Conta de energia da loja"></div>
+    <div class="field"><label>Valor</label><input name="amount" data-mask="money" required placeholder="Ex.: 150,00"></div>
+    <div class="field"><label>Emissão</label><input type="date" name="issue_date" value="<?= date('Y-m-d') ?>" title="Ex.: <?= date('d/m/Y') ?>"></div>
+    <div class="field"><label>Vencimento</label><input type="date" name="due_date" value="<?= date('Y-m-d') ?>" title="Ex.: <?= date('d/m/Y') ?>"></div>
+    <div class="field"><label>Cliente/fornecedor</label><select name="party_id"><option value="">Selecione uma opção...</option><?php foreach ($customers as $c): ?><option value="<?= (int) $c['id'] ?>">Cliente: <?= View::e($c['name']) ?></option><?php endforeach ?><?php foreach ($suppliers as $s): ?><option value="<?= (int) $s['id'] ?>">Fornecedor: <?= View::e($s['name']) ?></option><?php endforeach ?></select></div>
   </div>
   <button class="primary">Lançar</button>
 </form>
@@ -33,8 +33,8 @@
     <form method="post" action="/finance/settle" class="actions"><?= Csrf::field() ?>
       <input type="hidden" name="entry_id" value="<?= (int) $e['id'] ?>">
       <input type="hidden" name="idempotency_key" value="liq-<?= (int) $e['id'] ?>-<?= View::e(bin2hex(random_bytes(3))) ?>">
-      <select name="account_id"><?php foreach ($accounts as $a): ?><option value="<?= (int) $a['id'] ?>"><?= View::e($a['name']) ?></option><?php endforeach ?></select>
-      <input name="amount" value="<?= number_format((float) $e['amount'] - (float) $e['settled_amount'], 2, ',', '.') ?>" style="width:90px">
+      <select name="account_id" required><option value="">Selecione uma opção...</option><?php foreach ($accounts as $a): ?><option value="<?= (int) $a['id'] ?>"><?= View::e($a['name']) ?></option><?php endforeach ?></select>
+      <input name="amount" data-mask="money" value="<?= number_format((float) $e['amount'] - (float) $e['settled_amount'], 2, ',', '.') ?>" style="width:90px" placeholder="Ex.: 150,00">
       <button class="small">Liquidar</button>
     </form>
     <?php endif ?>

@@ -139,6 +139,23 @@ final class Auth
         return (bool) $stmt->fetchColumn();
     }
 
+    public static function isMaster(): bool
+    {
+        $user = self::user();
+        return $user !== null && (int) ($user['is_master'] ?? 0) === 1;
+    }
+
+    public static function requireMaster(): void
+    {
+        self::requireLogin();
+        if (!self::isMaster()) {
+            if (!headers_sent()) {
+                http_response_code(403);
+            }
+            throw new \RuntimeException('Somente o administrador master, dono da loja, configura o login dos funcionários.');
+        }
+    }
+
     public static function authorize(string $permission): void
     {
         self::requireLogin();

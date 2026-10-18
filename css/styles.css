@@ -26,7 +26,8 @@ body {
 }
 
 .topo {
-  background: #0f1b33;
+  background: #0a0a0a;
+  border-bottom: 2px solid #e8c56b;
   color: #fff;
   padding: 18px 28px;
   display: flex;
@@ -36,7 +37,7 @@ body {
   justify-content: space-between;
 }
 .topo h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
-.topo p { margin: 0; color: #b9c4dc; font-size: 14px; }
+.topo p { margin: 0; color: #e8c56b; font-size: 14px; }
 
 .aviso-armazenamento {
   margin: 16px 28px 0;
@@ -254,6 +255,7 @@ td.acoes button + button { margin-left: 4px; }
   background: repeating-linear-gradient(135deg, #fbfaf6, #fbfaf6 1mm, #f1eee5 1mm, #f1eee5 2mm);
 }
 
+input::placeholder, textarea::placeholder { color: #8a94a1; }
 dialog {
   border: none;
   border-radius: 12px;
@@ -262,6 +264,9 @@ dialog {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   color: var(--texto);
 }
+dialog.sp-confirm { width: min(460px, calc(100vw - 32px)); }
+.sp-confirm button.primary { background: var(--primaria); border-color: var(--primaria); color: #fff; }
+.sp-confirm button.danger { background: var(--perigo); border-color: var(--perigo); color: #fff; }
 dialog::backdrop { background: rgba(15, 27, 51, 0.55); }
 .dialogo-corpo { padding: 20px 22px; }
 .dialogo-corpo h2 { margin: 0 0 12px; font-size: 18px; }

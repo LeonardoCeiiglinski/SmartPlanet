@@ -15,7 +15,7 @@ final class UserController
 {
     public function index(): void
     {
-        Auth::authorize('users.manage');
+        Auth::requireMaster();
         $company = Auth::user()['company_id'];
         $stmt = Database::connection()->prepare(
             'SELECT u.*, r.name AS role_name, b.name AS branch_name
@@ -23,12 +23,12 @@ final class UserController
              WHERE u.company_id=:company ORDER BY u.active DESC, u.name'
         );
         $stmt->execute(['company' => $company]);
-        View::render('users/index', ['title' => 'Usuários', 'users' => $stmt->fetchAll()]);
+        View::render('users/index', ['title' => 'Funcionários', 'users' => $stmt->fetchAll()]);
     }
 
     public function form(): void
     {
-        Auth::authorize('users.manage');
+        Auth::requireMaster();
         $pdo = Database::connection();
         $company = Auth::user()['company_id'];
         $id = (int) ($_GET['id'] ?? 0);
@@ -38,21 +38,22 @@ final class UserController
             $stmt->execute(['id' => $id, 'company' => $company]);
             $user = $stmt->fetch() ?: null;
         }
-        $roles = $pdo->prepare('SELECT id,name FROM roles WHERE company_id=:company ORDER BY name');
+        $roles = $pdo->prepare("SELECT id,name FROM roles WHERE company_id=:company AND name <> 'Administrador' ORDER BY name");
         $branches = $pdo->prepare('SELECT id,name FROM branches WHERE company_id=:company AND active=1 ORDER BY name');
         $roles->execute(['company' => $company]);
         $branches->execute(['company' => $company]);
         View::render('users/form', [
-            'title' => $id ? 'Editar usuário' : 'Novo usuário',
+            'title' => $id ? 'Editar funcionário' : 'Novo funcionário',
             'editingUser' => $user,
             'roles' => $roles->fetchAll(),
             'branches' => $branches->fetchAll(),
+            'masterLocked' => $user !== null && (int) ($user['is_master'] ?? 0) === 1,
         ]);
     }
 
     public function save(): void
     {
-        Auth::authorize('users.manage');
+        Auth::requireMaster();
         Csrf::enforce();
         $pdo = Database::connection();
         $company = (int) Auth::user()['company_id'];
@@ -62,16 +63,37 @@ final class UserController
         $password = (string) ($_POST['password'] ?? '');
         $role = (int) ($_POST['role_id'] ?? 0);
         $branch = (int) ($_POST['branch_id'] ?? 0);
+        $existing = null;
+        if ($id) {
+            $current = $pdo->prepare('SELECT is_master, role_id FROM users WHERE id=:id AND company_id=:company');
+            $current->execute(['id' => $id, 'company' => $company]);
+            $existing = $current->fetch() ?: null;
+            if ($existing === null) {
+                throw new \RuntimeException('Funcionário não encontrado.');
+            }
+        }
+        $masterLocked = $existing !== null && (int) $existing['is_master'] === 1;
+        if ($masterLocked) {
+            $role = (int) $existing['role_id'];
+        }
         if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !$role || !$branch || (!$id && strlen($password) < 10)) {
             Session::flash('erro', 'Preencha nome, e-mail, perfil, filial e senha inicial de ao menos 10 caracteres.');
             View::redirect($id ? '/users/edit?id=' . $id : '/users/new');
+        }
+        if (!$masterLocked) {
+            $roleName = $pdo->prepare('SELECT name FROM roles WHERE id=:id AND company_id=:company');
+            $roleName->execute(['id' => $role, 'company' => $company]);
+            if ($roleName->fetchColumn() === 'Administrador') {
+                Session::flash('erro', 'O perfil de administrador master pertence ao dono da loja e não é atribuído a funcionários.');
+                View::redirect($id ? '/users/edit?id=' . $id : '/users/new');
+            }
         }
         $now = date('Y-m-d H:i:s');
         try {
             if ($id) {
                 $params = [
                     'name' => $name, 'email' => $email, 'role' => $role, 'branch' => $branch,
-                    'active' => isset($_POST['active']) ? 1 : 0, 'updated' => $now, 'id' => $id, 'company' => $company,
+                    'active' => $masterLocked ? 1 : (isset($_POST['active']) ? 1 : 0), 'updated' => $now, 'id' => $id, 'company' => $company,
                 ];
                 $set = 'name=:name,email=:email,role_id=:role,branch_id=:branch,active=:active,updated_at=:updated';
                 if ($password !== '') {
@@ -97,7 +119,7 @@ final class UserController
             View::redirect($id ? '/users/edit?id=' . $id : '/users/new');
         }
         Audit::log('user.saved', 'users', $id);
-        View::redirect('/users', 'sucesso', 'Usuário salvo.');
+        View::redirect('/users', 'sucesso', $masterLocked ? 'Dados do administrador master atualizados.' : 'Login do funcionário salvo.');
     }
 }
 

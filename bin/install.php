@@ -74,7 +74,7 @@ Database::transactional(static function (PDO $pdo) use ($company, $email, $passw
 
     $permissionIds = $pdo->query('SELECT id, code FROM permissions')->fetchAll(PDO::FETCH_KEY_PAIR);
     $grant = $pdo->prepare('INSERT INTO role_permissions (role_id, permission_id) VALUES (:role, :permission)');
-    $operatorCodes = ['dashboard.view', 'products.view', 'labels.print', 'stock.view', 'pos.sell', 'sales.view', 'cash.open', 'cash.move', 'cash.close'];
+    $operatorCodes = ['dashboard.view', 'products.view', 'labels.print', 'stock.view', 'pos.sell', 'sales.view', 'cash.open', 'cash.move', 'cash.close', 'procedures.view'];
     $managerDenied = ['users.manage', 'settings.manage'];
     foreach ($permissionIds as $permissionId => $code) {
         $grant->execute(['role' => $roleIds['Administrador'], 'permission' => (int) $permissionId]);
@@ -87,8 +87,8 @@ Database::transactional(static function (PDO $pdo) use ($company, $email, $passw
     }
 
     $pdo->prepare(
-        'INSERT INTO users (company_id, branch_id, role_id, name, email, password_hash, active, created_at, updated_at)
-         VALUES (:company, :branch, :role, :name, :email, :password, 1, :created, :updated)'
+        'INSERT INTO users (company_id, branch_id, role_id, name, email, password_hash, active, is_master, created_at, updated_at)
+         VALUES (:company, :branch, :role, :name, :email, :password, 1, 1, :created, :updated)'
     )->execute([
         'company' => $companyId,
         'branch' => $branchId,

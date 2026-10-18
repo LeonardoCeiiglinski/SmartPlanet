@@ -8,7 +8,7 @@ use App\Core\Csrf;
   <?= Csrf::field() ?>
   <div class="field">
     <label for="email">E-mail</label>
-    <input type="email" id="email" name="email" required autofocus>
+    <input type="email" id="email" name="email" required autofocus placeholder="Ex.: contato@empresa.com.br">
   </div>
   <div class="actions">
     <button type="submit" class="primary">Enviar instruções</button>

@@ -1,6 +1,6 @@
-# ERP PDV + etiquetas 33 × 21 mm
+# SmartPlanet · a Boutique do Celular
 
-O repositório agora contém o sistema comercial PHP (PDV, estoque, caixa, financeiro) e preserva o aplicativo estático de etiquetas.
+Sistema comercial da SmartPlanet, com PDV, estoque, caixa, financeiro e o aplicativo de etiquetas 33 × 21 mm.
 
 - **ERP/PDV:** veja [`docs/instalacao.md`](docs/instalacao.md). Execute `php -S localhost:8080 -t public public/router.php` após migrar e instalar.
 - **Etiquetas no ERP:** menu Etiquetas, alimentado pelo cadastro central. A impressão térmica continua no navegador (`layout.js`, `barcode.js`, `render.js`, `tspl.js`).

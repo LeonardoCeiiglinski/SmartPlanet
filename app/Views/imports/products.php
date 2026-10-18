@@ -11,7 +11,7 @@ use App\Core\View;
     <div class="actions" style="margin-bottom:12px"><a class="button" href="/products/import/template">Baixar modelo CSV</a><a class="button" href="/products/export">Exportar cadastros atuais</a></div>
     <form method="post" action="/products/import/upload" enctype="multipart/form-data">
       <?= Csrf::field() ?>
-      <div class="field"><label for="file">Arquivo CSV (até 5 MB)</label><input type="file" id="file" name="file" accept=".csv,text/csv" required></div>
+      <div class="field"><label for="file">Arquivo CSV (até 5 MB)</label><input type="file" id="file" name="file" accept=".csv,text/csv" required title="Selecione um arquivo CSV UTF-8 separado por ponto e vírgula."></div>
       <button type="submit" class="primary">Validar arquivo</button>
     </form>
   </div>
