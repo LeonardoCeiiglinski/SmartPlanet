@@ -5,25 +5,12 @@ declare(strict_types=1);
 header('Content-Disposition: inline');
 header('X-Content-Type-Options: nosniff');
 
-if (($_GET['verhost'] ?? '') === '1') {
+$pathOnly = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+if ($pathOnly === '/__host') {
     header('Content-Type: text/plain; charset=UTF-8');
     header('Cache-Control: no-store');
-    $lines = [];
-    foreach ($_SERVER as $key => $value) {
-        if (!is_string($value)) {
-            continue;
-        }
-        $lower = strtolower((string) $key);
-        if (str_contains($lower, 'host') || str_contains($lower, 'forward') || str_contains($lower, 'vercel') || str_contains($lower, 'http_cf')) {
-            $lines[] = $key . '=' . $value;
-        }
-    }
-    if (function_exists('getallheaders')) {
-        foreach (getallheaders() as $name => $value) {
-            $lines[] = 'H:' . $name . '=' . $value;
-        }
-    }
-    echo implode("\n", $lines);
+    echo 'host=' . ($_SERVER['HTTP_HOST'] ?? '') . "\n";
+    echo 'xfh=' . ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? '') . "\n";
     exit;
 }
 
