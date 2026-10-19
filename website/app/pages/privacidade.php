@@ -1,17 +1,19 @@
-<header class="page-hero" data-reveal>
+<header class="page-hero" data-reveal="fade">
   <p class="kicker">Privacidade</p>
-  <h1>O que este site guarda, e o que ele não guarda.</h1>
+  <h1>Privacidade do contato da SmartPlanet</h1>
 </header>
 <section class="prose narrow" data-reveal>
-  <p>A SmartPlanet, em Campinas, São José/SC, publica este site para informar endereço, entrega e um jeito de chamar a loja. Não há cadastro, carrinho nem conta de cliente aqui.</p>
-  <h2>WhatsApp</h2>
-  <p>O botão e o formulário de contato abrem uma conversa no WhatsApp, no número <?= e(SITE_PHONE_HUMAN) ?>. O texto é enviado por você, pelo aplicativo do WhatsApp. A SmartPlanet lê essa conversa como qualquer atendimento da loja. Este site não armazena o nome nem a mensagem num banco próprio.</p>
-  <h2>Visita às páginas</h2>
-  <p>O endereço das páginas pode aparecer nos registros técnicos do serviço que hospeda o site, como acontece com qualquer página na internet. Não usamos isso para montar anúncio individual nem vendemos lista de visitantes.</p>
-  <h2>Redes</h2>
-  <p>Instagram (@smartplanet_oficial) e a página Smart Planet no Facebook seguem as regras dessas plataformas. Sair deste site e entrar lá é uma visita a outro serviço.</p>
-  <h2>Mapa</h2>
-  <p>A página Onde estamos incorpora um mapa do OpenStreetMap. Ao carregar essa página, o seu navegador pede o mapa a esse serviço.</p>
-  <h2>Falar sobre isso</h2>
-  <p>Se quiser saber o que a loja tem de uma conversa sua, chama no <a href="<?= e(wa_link('Oi, quero falar sobre privacidade.')) ?>">WhatsApp</a> ou passa no balcão, na <?= e(SITE_STREET) ?>.</p>
+  <p>Esta página explica o que a SmartPlanet faz com os dados do formulário de contato. A loja fica na <?= e(SITE_STREET) ?>, bairro Campinas, em São José/SC.</p>
+  <h2>Dados que o formulário pede</h2>
+  <p>O formulário coleta nome, marca e modelo do celular, acessório e bairro. Esses campos não ficam salvos em cadastro neste site.</p>
+  <h2>Uso no atendimento pelo WhatsApp</h2>
+  <p>Ao enviar, o navegador abre o WhatsApp no número <?= e(SITE_PHONE_HUMAN) ?> com o texto que você escreveu. A SmartPlanet usa esses dados só para atender o seu pedido. A conversa continua no WhatsApp.</p>
+  <h2>Registro da visita</h2>
+  <p>A empresa que hospeda o site pode guardar o endereço das páginas visitadas, como acontece em outros sites. A SmartPlanet não vende dados de visitantes.</p>
+  <h2>Instagram e Facebook</h2>
+  <p>O perfil @smartplanet_oficial e a página Smart Planet seguem as regras do Instagram e do Facebook.</p>
+  <h2>Mapa da página Onde estamos</h2>
+  <p>Essa página mostra um mapa do OpenStreetMap. Ao abri-la, o navegador carrega o mapa desse serviço.</p>
+  <h2>Dúvidas sobre seus dados</h2>
+  <p>Fale no <a href="<?= e(wa_link('Oi, vim pelo site da SmartPlanet. Quero falar sobre os dados de uma conversa.')) ?>" rel="noopener noreferrer" title="Chamar no WhatsApp">WhatsApp <?= e(SITE_PHONE_HUMAN) ?></a> ou no balcão da loja.</p>
 </section>

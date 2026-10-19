@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/app/site.php';
 
+if (site_request_host() === 'www.lojadeeletronicossaojose.com.br') {
+    $target = $_SERVER['REQUEST_URI'] ?? '/';
+    header('Location: https://lojadeeletronicossaojose.com.br' . $target, true, 301);
+    exit;
+}
+
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = rtrim($path, '/') ?: '/';
 $pages = site_pages();
@@ -28,8 +34,8 @@ if ($path === '/sitemap.xml') {
 $found = isset($pages[$path]);
 $page = $found ? $pages[$path] : [
     'file' => '404.php',
-    'title' => 'Página não encontrada · SmartPlanet',
-    'description' => 'Esse endereço não existe na SmartPlanet. Volte para a loja em Campinas, São José.',
+    'title' => 'Página não encontrada | SmartPlanet',
+    'description' => 'Esse endereço não existe no site da SmartPlanet. A loja fica no bairro Campinas, em São José/SC.',
     'crumb' => 'Não encontrada',
 ];
 
@@ -43,46 +49,66 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header('X-Frame-Options: SAMEORIGIN');
 
-$canonical = site_url($found ? $path : '/');
+$canonical = site_url($path);
+$robots = $found ? 'index, follow, max-image-preview:large' : 'noindex, follow';
 $description = $page['description'];
 $title = $page['title'];
-$ogImage = site_url('/assets/img/logo.png');
+$ogImage = site_url('/assets/img/loja.jpg');
+$imageAlt = 'Balcão da loja SmartPlanet com capinhas e cabos, em Campinas, São José/SC';
 
 $crumbs = [['name' => 'Início', 'path' => '/']];
 if ($path !== '/' && !empty($page['crumb'])) {
     $crumbs[] = ['name' => $page['crumb'], 'path' => $path];
 }
 
-$graph = [
-    [
-        '@type' => 'ElectronicsStore',
+$address = [
+    '@type' => 'PostalAddress',
+    'streetAddress' => SITE_STREET,
+    'addressLocality' => 'São José',
+    'addressRegion' => 'SC',
+    'postalCode' => SITE_CEP,
+    'addressCountry' => 'BR',
+];
+$graph = [];
+if ($path === '/') {
+    $graph[] = [
+        '@type' => 'LocalBusiness',
         '@id' => site_url('/') . '#loja',
         'name' => SITE_NAME,
         'alternateName' => SITE_TAG,
-        'description' => 'Loja de capinhas e acessórios para celular em Campinas, São José/SC, com entrega na Grande Florianópolis.',
+        'description' => 'Loja de acessórios para celular no bairro Campinas, em São José/SC.',
         'url' => site_url('/'),
-        'image' => $ogImage,
-        'telephone' => '+' . SITE_PHONE_E164,
-        'priceRange' => '$$',
-        'address' => [
-            '@type' => 'PostalAddress',
-            'streetAddress' => SITE_STREET,
-            'addressLocality' => 'São José',
-            'addressRegion' => 'SC',
-            'postalCode' => SITE_CEP,
-            'addressCountry' => 'BR',
-        ],
+        'image' => [site_url('/assets/img/loja.jpg'), site_url('/assets/img/logo.png')],
+        'telephone' => '+55 48 99662-8811',
+        'address' => $address,
         'geo' => [
             '@type' => 'GeoCoordinates',
             'latitude' => SITE_LAT,
             'longitude' => SITE_LNG,
         ],
-        'areaServed' => ['São José', 'Florianópolis', 'Palhoça', 'Biguaçu'],
         'sameAs' => [SITE_INSTAGRAM, SITE_FACEBOOK],
         'hasMap' => maps_link(),
-    ],
-];
-if (count($crumbs) > 1) {
+    ];
+    $graph[] = [
+        '@type' => 'Organization',
+        '@id' => site_url('/') . '#organizacao',
+        'name' => SITE_NAME,
+        'url' => site_url('/'),
+        'logo' => site_url('/assets/img/logo.png'),
+        'telephone' => '+55 48 99662-8811',
+        'address' => $address,
+        'sameAs' => [SITE_INSTAGRAM, SITE_FACEBOOK],
+    ];
+    $graph[] = [
+        '@type' => 'WebSite',
+        '@id' => site_url('/') . '#site',
+        'url' => site_url('/'),
+        'name' => SITE_NAME,
+        'inLanguage' => 'pt-BR',
+        'publisher' => ['@id' => site_url('/') . '#organizacao'],
+    ];
+}
+if ($found && count($crumbs) > 1) {
     $items = [];
     foreach ($crumbs as $i => $crumb) {
         $items[] = [
@@ -94,7 +120,21 @@ if (count($crumbs) > 1) {
     }
     $graph[] = ['@type' => 'BreadcrumbList', 'itemListElement' => $items];
 }
-$jsonLd = json_encode([
+if ($path === '/entrega') {
+    $questions = [];
+    foreach (site_delivery_faq() as $item) {
+        $questions[] = [
+            '@type' => 'Question',
+            'name' => $item['q'],
+            'acceptedAnswer' => [
+                '@type' => 'Answer',
+                'text' => $item['a'],
+            ],
+        ];
+    }
+    $graph[] = ['@type' => 'FAQPage', 'mainEntity' => $questions];
+}
+$jsonLd = $graph === [] ? '' : json_encode([
     '@context' => 'https://schema.org',
     '@graph' => $graph,
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

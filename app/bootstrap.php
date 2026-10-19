@@ -53,7 +53,17 @@ set_exception_handler(static function (Throwable $exception): void {
     echo '<body><h1>Erro interno</h1><p>' . $message . '</p></body></html>';
 });
 
-if (Env::get('APP_URL') === null && Env::get('VERCEL_URL')) {
+$forwardedHost = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? '';
+$forwardedHost = strtolower(trim(explode(',', (string) $forwardedHost)[0]));
+$forwardedHost = (string) preg_replace('/:\d+$/', '', $forwardedHost);
+if ($forwardedHost === 'pdv.lojadeeletronicossaojose.com.br') {
+    $_ENV['APP_URL'] = 'https://pdv.lojadeeletronicossaojose.com.br';
+    $_SERVER['APP_URL'] = 'https://pdv.lojadeeletronicossaojose.com.br';
+    $_ENV['SESSION_SECURE'] = 'true';
+    $_SERVER['SESSION_SECURE'] = 'true';
+    putenv('APP_URL=https://pdv.lojadeeletronicossaojose.com.br');
+    putenv('SESSION_SECURE=true');
+} elseif (Env::get('APP_URL') === null && Env::get('VERCEL_URL')) {
     putenv('APP_URL=https://' . Env::get('VERCEL_URL'));
     $_ENV['APP_URL'] = 'https://' . Env::get('VERCEL_URL');
 }
