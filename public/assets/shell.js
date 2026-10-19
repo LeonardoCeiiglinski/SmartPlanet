@@ -65,14 +65,20 @@
       const type = (old.getAttribute('type') || 'text/javascript').toLowerCase();
       if (type !== 'text/javascript' && type !== 'application/javascript' && type !== '') continue;
       if (old.src) {
-        const code = await fetch(old.src, { credentials: 'same-origin', cache: 'no-cache' }).then((res) => {
-          if (!res.ok) throw new Error('Falha ao carregar script');
-          return res.text();
+        await new Promise((resolve, reject) => {
+          const next = document.createElement('script');
+          next.src = old.src;
+          if (old.getAttribute('nonce')) next.setAttribute('nonce', old.getAttribute('nonce'));
+          next.async = false;
+          next.onload = () => resolve();
+          next.onerror = () => reject(new Error('Falha ao carregar script'));
+          old.replaceWith(next);
         });
-        (0, eval)(code + '\n//# sourceURL=' + old.src);
-        old.remove();
       } else {
-        (0, eval)(old.textContent);
+        const next = document.createElement('script');
+        if (old.getAttribute('nonce')) next.setAttribute('nonce', old.getAttribute('nonce'));
+        next.textContent = old.textContent;
+        old.replaceWith(next);
       }
     }
   }
@@ -105,6 +111,7 @@
 
       window.__posAbort && window.__posAbort.abort();
       window.__labelsAbort && window.__labelsAbort.abort();
+      window.__labelsPageAbort && window.__labelsPageAbort.abort();
 
       const nextMain = doc.querySelector('.main-content');
       const currentMain = main();
@@ -149,6 +156,25 @@
       if (token === inflight) hideProgress();
     }
   }
+
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('.menu-toggle')) {
+      document.body.classList.toggle('menu-open');
+    }
+    if (event.target.closest('[data-print]')) {
+      window.print();
+    }
+  });
+
+  document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    const message = form.getAttribute('data-confirm');
+    if (message && !window.confirm(message)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
 
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

@@ -8,6 +8,8 @@ use PDO;
 
 final class Auth
 {
+    private const DUMMY_HASH = '$2y$12$arXOdB8ZT16BAfJUPI9zB.h3psOb1LtfjbBc6b5OJJ9wl.vUZ7mo6';
+
     /** @var array<string, mixed>|null */
     private static ?array $user = null;
 
@@ -29,7 +31,11 @@ final class Auth
         );
         $stmt->execute(['id' => (int) $id]);
         $user = $stmt->fetch();
-        self::$user = $user ?: null;
+        if (!$user || !self::sessionIsCurrent((int) $user['id'])) {
+            self::$user = null;
+            return null;
+        }
+        self::$user = $user;
         return self::$user;
     }
 
@@ -38,17 +44,38 @@ final class Auth
         $pdo = Database::connection();
         self::guardAttempts($email, $ip);
 
+        $email = mb_strtolower(trim($email));
+        if ($email === '' || strlen($email) > 191 || strlen($password) === 0 || strlen($password) > 200) {
+            password_verify($password !== '' ? $password : 'invalid', self::DUMMY_HASH);
+            $pdo->prepare(
+                'INSERT INTO login_attempts (email, ip_address, succeeded, attempted_at)
+                 VALUES (:email, :ip, 0, :at)'
+            )->execute([
+                'email' => substr($email, 0, 191),
+                'ip' => $ip,
+                'at' => date('Y-m-d H:i:s'),
+            ]);
+            return false;
+        }
         $stmt = $pdo->prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(:email) AND active = 1 LIMIT 1');
-        $stmt->execute(['email' => trim($email)]);
+        $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
-        $ok = is_array($user) && password_verify($password, (string) $user['password_hash']);
+        $hash = is_array($user) ? (string) $user['password_hash'] : self::DUMMY_HASH;
+        $ok = is_array($user) && password_verify($password, $hash);
+        if ($ok && password_needs_rehash($hash, PASSWORD_DEFAULT)) {
+            $pdo->prepare('UPDATE users SET password_hash = :hash, updated_at = :at WHERE id = :id')->execute([
+                'hash' => password_hash($password, PASSWORD_DEFAULT),
+                'at' => date('Y-m-d H:i:s'),
+                'id' => (int) $user['id'],
+            ]);
+        }
 
         $log = $pdo->prepare(
             'INSERT INTO login_attempts (email, ip_address, succeeded, attempted_at)
              VALUES (:email, :ip, :succeeded, :at)'
         );
         $log->execute([
-            'email' => mb_strtolower(trim($email)),
+            'email' => $email,
             'ip' => $ip,
             'succeeded' => $ok ? 1 : 0,
             'at' => date('Y-m-d H:i:s'),
@@ -61,6 +88,7 @@ final class Auth
         Session::regenerate();
         Session::put('user_id', (int) $user['id']);
         Session::put('branch_id', (int) $user['branch_id']);
+        Session::put('_client', hash('sha256', (string) ($_SERVER['HTTP_USER_AGENT'] ?? '')));
         self::$user = null;
         $sessionHash = hash('sha256', session_id());
         Session::put('_session_hash', $sessionHash);
@@ -172,14 +200,55 @@ final class Auth
         $minutes = Env::int('LOGIN_LOCK_MINUTES', 15);
         $max = Env::int('LOGIN_MAX_ATTEMPTS', 5);
         $since = date('Y-m-d H:i:s', time() - $minutes * 60);
-        $stmt = Database::connection()->prepare(
+        $pdo = Database::connection();
+        $byEmail = $pdo->prepare(
             'SELECT COUNT(*) FROM login_attempts
-             WHERE succeeded = 0 AND attempted_at >= :since
-               AND (LOWER(email) = LOWER(:email) OR ip_address = :ip)'
+             WHERE succeeded = 0 AND attempted_at >= :since AND LOWER(email) = LOWER(:email)'
         );
-        $stmt->execute(['since' => $since, 'email' => trim($email), 'ip' => $ip]);
-        if ((int) $stmt->fetchColumn() >= $max) {
+        $byEmail->execute(['since' => $since, 'email' => trim($email)]);
+        $byIp = $pdo->prepare(
+            'SELECT COUNT(*) FROM login_attempts
+             WHERE succeeded = 0 AND attempted_at >= :since AND ip_address = :ip'
+        );
+        $byIp->execute(['since' => $since, 'ip' => $ip]);
+        if ((int) $byEmail->fetchColumn() >= $max || (int) $byIp->fetchColumn() >= ($max * 6)) {
             throw new \RuntimeException("Muitas tentativas. Aguarde {$minutes} minutos.");
+        }
+    }
+
+    private static function sessionIsCurrent(int $userId): bool
+    {
+        $fingerprint = hash('sha256', (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        $storedFingerprint = Session::get('_client');
+        $sessionHash = Session::get('_session_hash');
+        if (is_string($storedFingerprint) && !hash_equals($storedFingerprint, $fingerprint)) {
+            self::dropSession();
+            return false;
+        }
+        if (!is_string($sessionHash) || $sessionHash === '') {
+            return true;
+        }
+        $stmt = Database::connection()->prepare(
+            'SELECT 1 FROM user_sessions
+             WHERE session_hash = :hash AND user_id = :user AND logged_out_at IS NULL
+             LIMIT 1'
+        );
+        $stmt->execute(['hash' => $sessionHash, 'user' => $userId]);
+        if (!$stmt->fetchColumn()) {
+            self::dropSession();
+            return false;
+        }
+        Database::connection()->prepare(
+            'UPDATE user_sessions SET last_activity_at = :at WHERE session_hash = :hash'
+        )->execute(['at' => date('Y-m-d H:i:s'), 'hash' => $sessionHash]);
+        return true;
+    }
+
+    private static function dropSession(): void
+    {
+        self::$user = null;
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            Session::destroy();
         }
     }
 }

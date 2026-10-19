@@ -35,9 +35,14 @@ final class Env
 
     public static function get(string $key, ?string $default = null): ?string
     {
-        $value = getenv($key);
-        if ($value !== false) {
-            return $value;
+        foreach ([$_ENV[$key] ?? null, $_SERVER[$key] ?? null] as $value) {
+            if (is_string($value)) {
+                return $value;
+            }
+        }
+        $env = getenv($key);
+        if (is_string($env)) {
+            return $env;
         }
         return self::$values[$key] ?? $default;
     }

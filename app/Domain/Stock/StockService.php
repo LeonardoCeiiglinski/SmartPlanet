@@ -7,6 +7,7 @@ namespace App\Domain\Stock;
 use App\Core\Audit;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Domain\Finance\FinanceLedger;
 use PDO;
 
 final class StockService
@@ -19,9 +20,11 @@ final class StockService
         $filter = '';
         if ($query !== '') {
             $like = '%' . mb_strtolower($query) . '%';
-            $filter = ' AND (LOWER(p.description) LIKE :query OR LOWER(p.internal_code) LIKE :query_code)';
+            $filter = ' AND (LOWER(p.description) LIKE :query OR LOWER(p.internal_code) LIKE :query_code
+                OR EXISTS (SELECT 1 FROM product_barcodes pb WHERE pb.product_id = p.id AND pb.company_id = p.company_id AND pb.barcode LIKE :barcode))';
             $params['query'] = $like;
             $params['query_code'] = $like;
+            $params['barcode'] = '%' . $query . '%';
         }
         $stmt = Database::connection()->prepare(
             "SELECT p.id,p.internal_code,p.description,p.minimum_stock,u.code AS unit_code,
@@ -80,6 +83,7 @@ final class StockService
                 'source_id' => $key, 'line' => '1', 'reason' => $reason, 'user' => $user['id'], 'at' => date('Y-m-d H:i:s'),
             ]);
             $id = (int) $pdo->lastInsertId();
+            $this->postStockFinance($pdo, $user, $productId, (float) $value, 'stock_adjustment', (string) $id, 'Ajuste de estoque: '.$reason);
             Audit::log('stock.adjusted', 'stock_movements', $id, null, ['quantity' => $value, 'reason' => $reason]);
             return $id;
         });
@@ -138,12 +142,33 @@ final class StockService
                         'product' => $item['product_id'], 'quantity' => number_format($difference, 4, '.', ''),
                         'source' => (string) $inventoryId, 'line' => (string) $item['id'], 'reason' => 'Fechamento de inventário',
                         'user' => $user['id'], 'at' => date('Y-m-d H:i:s')]);
+                    $this->postStockFinance($pdo, $user, (int) $item['product_id'], $difference, 'inventory_count', $inventoryId.'-'.$item['id'], 'Inventário #'.$inventoryId);
                 }
             }
             $pdo->prepare('UPDATE inventory_counts SET status=\'closed\',closed_by=:user,closed_at=:at WHERE id=:id')
                 ->execute(['user' => $user['id'], 'at' => date('Y-m-d H:i:s'), 'id' => $inventoryId]);
             Audit::log('inventory.closed', 'inventory_counts', $inventoryId);
         });
+    }
+
+    /** @param array<string,mixed> $user */
+    private function postStockFinance(PDO $pdo, array $user, int $productId, float $qty, string $sourceType, string $sourceId, string $description): void
+    {
+        $cost = $pdo->prepare('SELECT cost_price FROM products WHERE id=:id AND company_id=:company');
+        $cost->execute(['id' => $productId, 'company' => $user['company_id']]);
+        $amount = round(abs($qty) * (float) $cost->fetchColumn(), 2);
+        if ($amount <= 0) {
+            return;
+        }
+        FinanceLedger::post($pdo, $user, [
+            'direction' => $qty < 0 ? 'out' : 'in',
+            'category' => FinanceLedger::STOCK,
+            'description' => $description,
+            'amount' => $amount,
+            'status' => 'settled',
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+        ]);
     }
 
     private function assertProductAndLocation(PDO $pdo, int $product, int $location): void

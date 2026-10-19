@@ -7,6 +7,7 @@ namespace App\Domain\Management;
 use App\Core\Audit;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Domain\Finance\FinanceLedger;
 use App\Domain\Sales\PosService;
 use PDO;
 
@@ -58,6 +59,28 @@ final class ManagementService
         });
     }
 
+    public function cancelQuote(int $quoteId, string $reason): void
+    {
+        $u = Auth::user();
+        if (mb_strlen(trim($reason)) < 5) {
+            throw new \InvalidArgumentException('Justificativa obrigatória.');
+        }
+        Database::transactional(function (PDO $pdo) use ($u, $quoteId, $reason): void {
+            $q = $pdo->prepare('SELECT * FROM quotes WHERE id=:id AND company_id=:company AND branch_id=:branch');
+            $q->execute(['id' => $quoteId, 'company' => $u['company_id'], 'branch' => $u['branch_id']]);
+            $quote = $q->fetch();
+            if (!$quote || $quote['converted_sale_id'] || $quote['status'] === 'converted') {
+                throw new \RuntimeException('Orçamento convertido não pode ser cancelado.');
+            }
+            if ($quote['status'] === 'cancelled') {
+                return;
+            }
+            $pdo->prepare('UPDATE quotes SET status=\'cancelled\',updated_at=:at WHERE id=:id')
+                ->execute(['at' => date('Y-m-d H:i:s'), 'id' => $quoteId]);
+            Audit::log('quote.cancelled', 'quotes', $quoteId, ['status' => $quote['status']], ['reason' => $reason]);
+        });
+    }
+
     /** @param array<int,array<string,mixed>> $items */
     public function returnSale(int $saleId,string $key,array $items,string $reason,bool $refundCash): int
     {
@@ -68,7 +91,7 @@ final class ManagementService
             $s=$pdo->prepare('SELECT * FROM sales WHERE id=:id AND company_id=:company AND branch_id=:branch AND status=\'completed\'');$s->execute(['id'=>$saleId,'company'=>$u['company_id'],'branch'=>$u['branch_id']]);$sale=$s->fetch();if(!$sale)throw new \RuntimeException('Venda não disponível para devolução.');
             $safe=[];$total=0.0;
             foreach($items as $line){
-                $q=self::decimal($line['quantity']??0,4);$st=$pdo->prepare('SELECT si.*,p.track_stock FROM sale_items si JOIN products p ON p.id=si.product_id WHERE si.id=:id AND si.sale_id=:sale');$st->execute(['id'=>(int)($line['sale_item_id']??0),'sale'=>$saleId]);$item=$st->fetch();
+                $q=self::decimal($line['quantity']??0,4);$st=$pdo->prepare('SELECT si.*,p.track_stock,p.cost_price FROM sale_items si JOIN products p ON p.id=si.product_id WHERE si.id=:id AND si.sale_id=:sale');$st->execute(['id'=>(int)($line['sale_item_id']??0),'sale'=>$saleId]);$item=$st->fetch();
                 if(!$item||$q<=0||$q>(float)$item['quantity']-(float)$item['returned_quantity']+0.00001)throw new \RuntimeException('Quantidade devolvida excede o saldo vendido.');
                 $amount=round(((float)$item['subtotal']/(float)$item['quantity'])*$q,2);$total+=$amount;$safe[]=[$item,$q,$amount,!empty($line['return_to_stock'])];
             }
@@ -80,7 +103,9 @@ final class ManagementService
                 $pdo->prepare('UPDATE sale_items SET returned_quantity=returned_quantity+:quantity WHERE id=:id')->execute(['quantity'=>$qty,'id'=>$item['id']]);
                 if($toStock&&(int)$item['track_stock']===1)$pdo->prepare('INSERT INTO stock_movements(company_id,branch_id,location_id,product_id,movement_type,quantity,source_type,source_id,source_line,reason,user_id,occurred_at)VALUES(:company,:branch,:location,:product,\'sale_return\',:quantity,\'sale_return\',:source,:line,:reason,:user,:at)')->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'location'=>$location,'product'=>$item['product_id'],'quantity'=>$qty,'source'=>(string)$returnId,'line'=>(string)$item['id'],'reason'=>$reason,'user'=>$u['id'],'at'=>$now]);
             }
-            $pdo->prepare('INSERT INTO financial_entries(company_id,branch_id,direction,description,document_number,issue_date,due_date,amount,settled_amount,status,source_type,source_id,created_by,created_at,updated_at)VALUES(:company,:branch,\'out\',:description,:document,:date,:date,:amount,:settled,\'settled\',\'sale_return\',:source,:user,:at,:at)')->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'description'=>'Estorno '.$sale['sale_number'],'document'=>$number,'date'=>date('Y-m-d'),'amount'=>self::money($total),'settled'=>self::money($total),'source'=>(string)$returnId,'user'=>$u['id'],'at'=>$now]);
+            FinanceLedger::post($pdo,$u,['direction'=>'out','category'=>FinanceLedger::RETURNS,'description'=>'Estorno '.$sale['sale_number'],'document'=>$number,'amount'=>$total,'status'=>$refundCash?'settled':'open','source_type'=>'sale_return','source_id'=>(string)$returnId,'customer_id'=>$sale['customer_id']?:null]);
+            $cogs=0.0; foreach($safe as [$item,$qty]) { $cogs += round((float)$item['cost_price']*$qty,2); }
+            if($cogs>0){ FinanceLedger::post($pdo,$u,['direction'=>'in','category'=>FinanceLedger::COGS,'description'=>'Estorno CMV '.$sale['sale_number'],'document'=>$number,'amount'=>$cogs,'status'=>'settled','source_type'=>'sale_cogs_return','source_id'=>(string)$returnId]); }
             if($refundCash){$cs=$pdo->prepare('SELECT id FROM cash_sessions WHERE company_id=:company AND branch_id=:branch AND user_id=:user AND status=\'open\' ORDER BY id DESC LIMIT 1');$cs->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'user'=>$u['id']]);$session=$cs->fetchColumn();if(!$session)throw new \RuntimeException('Abra o caixa para estorno em dinheiro.');$pdo->prepare('INSERT INTO cash_movements(cash_session_id,movement_type,amount,reason,source_type,source_id,user_id,authorized_by,created_at)VALUES(:session,\'return\',:amount,:reason,\'sale_return\',:source,:user,:user,:at)')->execute(['session'=>$session,'amount'=>self::money($total),'reason'=>$reason,'source'=>(string)$returnId,'user'=>$u['id'],'at'=>$now]);}
             Audit::log('sale.returned','sale_returns',$returnId,null,['sale_id'=>$saleId,'total'=>$total]);return$returnId;
         });
@@ -89,7 +114,47 @@ final class ManagementService
     public function createEntry(string $direction,string $description,string $amount,string $issue,string $due,?int $partyId=null): int
     {
         Auth::authorize('finance.manage');$u=Auth::user();if(!in_array($direction,['in','out'],true)||trim($description)==='')throw new \InvalidArgumentException('Lançamento inválido.');$value=self::decimal($amount,2);if($value<=0)throw new \InvalidArgumentException('Valor inválido.');
-        $now=date('Y-m-d H:i:s');$pdo=Database::connection();$pdo->prepare('INSERT INTO financial_entries(company_id,branch_id,customer_id,supplier_id,direction,description,issue_date,due_date,amount,status,created_by,created_at,updated_at)VALUES(:company,:branch,:customer,:supplier,:direction,:description,:issue,:due,:amount,\'open\',:user,:at,:at)')->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id'],'customer'=>$direction==='in'?$partyId:null,'supplier'=>$direction==='out'?$partyId:null,'direction'=>$direction,'description'=>trim($description),'issue'=>$issue,'due'=>$due,'amount'=>self::money($value),'user'=>$u['id'],'at'=>$now]);$id=(int)$pdo->lastInsertId();Audit::log('finance.entry_created','financial_entries',$id,null,['direction'=>$direction,'amount'=>$value]);return$id;
+        return Database::transactional(function(PDO $pdo) use($u,$direction,$description,$amount,$issue,$due,$partyId,$value): int {
+            return FinanceLedger::post($pdo,$u,[
+                'direction'=>$direction,
+                'category'=>FinanceLedger::MANUAL,
+                'description'=>trim($description),
+                'amount'=>$value,
+                'date'=>$issue,
+                'due'=>$due,
+                'status'=>'open',
+                'source_type'=>'manual',
+                'source_id'=>'manual-'.bin2hex(random_bytes(8)),
+                'customer_id'=>$direction==='in'?$partyId:null,
+                'supplier_id'=>$direction==='out'?$partyId:null,
+            ]);
+        });
+    }
+
+    public function cancelEntry(int $entryId, string $reason): void
+    {
+        Auth::authorize('finance.manage');
+        $u = Auth::user();
+        if (mb_strlen(trim($reason)) < 5) {
+            throw new \InvalidArgumentException('Justificativa obrigatória.');
+        }
+        Database::transactional(function (PDO $pdo) use ($u, $entryId, $reason): void {
+            $e = $pdo->prepare('SELECT * FROM financial_entries WHERE id=:id AND company_id=:company AND branch_id=:branch');
+            $e->execute(['id' => $entryId, 'company' => $u['company_id'], 'branch' => $u['branch_id']]);
+            $entry = $e->fetch();
+            if (!$entry) {
+                throw new \RuntimeException('Lançamento não encontrado.');
+            }
+            if ($entry['source_type'] !== 'manual') {
+                throw new \RuntimeException('Cancele pela origem operacional (venda, compra, caixa ou estoque).');
+            }
+            if ((float) $entry['settled_amount'] > 0) {
+                throw new \RuntimeException('Lançamento já liquidado não pode ser apagado. Preserve o histórico.');
+            }
+            $pdo->prepare('UPDATE financial_entries SET status=\'cancelled\',updated_at=:at WHERE id=:id')
+                ->execute(['at' => date('Y-m-d H:i:s'), 'id' => $entryId]);
+            Audit::log('finance.cancelled', 'financial_entries', $entryId, ['status' => $entry['status']], ['reason' => $reason]);
+        });
     }
 
     public function settle(int $entryId,int $accountId,string $amount,string $key,string $notes=''): int

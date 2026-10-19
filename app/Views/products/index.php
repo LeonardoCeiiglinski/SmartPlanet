@@ -16,7 +16,7 @@ use App\Core\View;
     <form method="get" action="/products" class="filters">
       <div class="field">
         <label for="q">Descrição, código interno ou código de barras</label>
-        <input type="text" id="q" name="q" value="<?= View::e($search) ?>" placeholder="Digite para pesquisar...">
+        <input type="text" id="q" name="q" data-scanner="search" value="<?= View::e($search) ?>" placeholder="Digite ou bipe o código de barras...">
       </div>
       <button type="submit">Pesquisar</button>
       <?php if ($search !== ''): ?><a class="button" href="/products">Limpar</a><?php endif; ?>

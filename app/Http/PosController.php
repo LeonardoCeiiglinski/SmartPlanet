@@ -32,7 +32,8 @@ final class PosController
     {
         Auth::authorize('pos.sell');
         header('Content-Type: application/json; charset=UTF-8');
-        echo json_encode(['items'=>$this->service->search((string)($_GET['q']??''))],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+        $exact = (string) ($_GET['exact'] ?? '') === '1';
+        echo json_encode(['items'=>$this->service->search((string)($_GET['q']??''), $exact)],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
     }
 
     public function complete(): void

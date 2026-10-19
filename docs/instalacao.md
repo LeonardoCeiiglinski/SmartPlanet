@@ -24,6 +24,10 @@ sem PHP. O GitHub Pages permanece como versão estática.
 
 O comando de instalação só roda se o banco estiver vazio.
 
+## Vercel
+
+Siga [`docs/vercel.md`](vercel.md). Não use SQLite na Vercel.
+
 ## Produção
 
 1. Aponte o document root para `public/`.

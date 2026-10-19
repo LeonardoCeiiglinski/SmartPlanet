@@ -20,7 +20,7 @@ assert.match(layout, /\$headExtra/, 'layout não aceita CSS extra da página de 
 assert.match(layout, /\$bodyEnd/, 'layout não aceita scripts da página de etiquetas');
 assert.match(controller, /View::render\('labels\/index'/, 'menu Etiquetas não usa o layout do sistema');
 assert.match(controller, /bodyClass/, 'página de etiquetas não marca o layout do ERP');
-assert.match(view, /\/legacy\/css\/styles\.css/, 'CSS original não é servido pelo menu');
+assert.match(view, /\/assets\/labels-embed\.css/, 'CSS do menu Etiquetas ausente');
 assert.match(view, /\/legacy\/js\/layout\.js/, 'scripts originais não são servidos pelo menu');
 assert.match(view, /\/legacy\/js\/app\.js/, 'aplicativo original não é servido pelo menu');
 assert.match(view, /id="form-produto"/, 'cadastro original ausente');

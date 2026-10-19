@@ -64,6 +64,27 @@ final class ReportController
              ORDER BY r.id DESC",
             $params
         );
+        $finance = $this->rows($pdo,
+            "SELECT e.direction, COALESCE(cat.name,'Sem categoria') category, e.status,
+                    SUM(e.amount) amount, SUM(e.settled_amount) settled
+             FROM financial_entries e LEFT JOIN financial_categories cat ON cat.id=e.category_id
+             WHERE e.company_id=:company AND e.branch_id=:branch AND e.status<>'cancelled'
+               AND e.issue_date BETWEEN :fromd AND :tod
+             GROUP BY e.direction, cat.name, e.status ORDER BY e.direction, category",
+            ['company' => $u['company_id'], 'branch' => $u['branch_id'], 'fromd' => $from, 'tod' => $to]
+        );
+        $result = $pdo->prepare(
+            "SELECT
+               COALESCE(SUM(CASE WHEN direction='in' AND source_type='sale_payment' AND status<>'cancelled' THEN amount ELSE 0 END),0) AS receita,
+               COALESCE(SUM(CASE WHEN direction='out' AND source_type='sale_cogs' AND status<>'cancelled' THEN amount ELSE 0 END),0) AS cmv,
+               COALESCE(SUM(CASE WHEN direction='in' AND source_type='sale_cogs_return' AND status<>'cancelled' THEN amount ELSE 0 END),0) AS cmv_estorno,
+               COALESCE(SUM(CASE WHEN direction='out' AND source_type='sale_return' AND status<>'cancelled' THEN amount ELSE 0 END),0) AS devolucoes
+             FROM financial_entries WHERE company_id=:company AND branch_id=:branch AND issue_date BETWEEN :fromd AND :tod"
+        );
+        $result->execute(['company' => $u['company_id'], 'branch' => $u['branch_id'], 'fromd' => $from, 'tod' => $to]);
+        $pnl = $result->fetch() ?: ['receita' => 0, 'cmv' => 0, 'cmv_estorno' => 0, 'devolucoes' => 0];
+        $pnl['lucro'] = (float) $pnl['receita'] - (float) $pnl['cmv'] + (float) $pnl['cmv_estorno'] - (float) $pnl['devolucoes'];
+
         $cash = $this->rows($pdo,
             "SELECT cs.opened_at, cs.closed_at, cs.opening_amount, cs.expected_cash, cs.counted_cash, cs.difference_amount, cs.closing_notes, cr.name register_name, u.name operator_name
              FROM cash_sessions cs JOIN cash_registers cr ON cr.id=cs.cash_register_id JOIN users u ON u.id=cs.user_id
@@ -87,6 +108,8 @@ final class ReportController
             'lowStock' => $lowStock,
             'returns' => $returns,
             'cash' => $cash,
+            'finance' => $finance,
+            'pnl' => $pnl,
         ]);
     }
 

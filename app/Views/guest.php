@@ -12,16 +12,18 @@ use App\Core\View;
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/assets/erp.css">
+  <link rel="stylesheet" href="/assets/login.css">
+  <meta name="referrer" content="no-referrer">
 </head>
 <body class="guest-page">
-  <main class="guest-box">
-    <img class="guest-logo" src="/assets/logo-smartplanet.png" alt="SmartPlanet, a Boutique do Celular">
+  <main class="vault">
+    <img class="vault-logo" src="/assets/logo-smartplanet.png" alt="SmartPlanet, a Boutique do Celular">
     <?php foreach (Session::consumeFlash() as $flash): ?>
       <div class="flash <?= View::e($flash['type']) ?>"><?= View::e($flash['message']) ?></div>
     <?php endforeach; ?>
     <?= $content ?>
   </main>
-  <script src="/assets/forms.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/forms.js') ?: time()) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/login.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/login.js') ?: time()) ?>"></script>
 </body>
 </html>
 

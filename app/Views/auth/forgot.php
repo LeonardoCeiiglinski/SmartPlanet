@@ -2,6 +2,7 @@
 
 use App\Core\Csrf;
 ?>
+<p class="vault-kicker">Recuperação</p>
 <h2>Recuperar senha</h2>
 <p class="muted">Informe o e-mail cadastrado. O link expira em uma hora.</p>
 <form method="post" action="/forgot">

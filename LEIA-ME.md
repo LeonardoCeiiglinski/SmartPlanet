@@ -3,6 +3,7 @@
 Sistema comercial da SmartPlanet, com PDV, estoque, caixa, financeiro e o aplicativo de etiquetas 33 × 21 mm.
 
 - **ERP/PDV:** veja [`docs/instalacao.md`](docs/instalacao.md). Execute `php -S localhost:8080 -t public public/router.php` após migrar e instalar.
+- **Vercel:** veja [`docs/vercel.md`](docs/vercel.md). Use MySQL persistente; SQLite não serve na nuvem.
 - **Etiquetas no ERP:** menu Etiquetas, alimentado pelo cadastro central. A impressão térmica continua no navegador (`layout.js`, `barcode.js`, `render.js`, `tspl.js`).
 - **App estático original:** `index.html` e tag `backup-static-20261017`.
 - **Fiscal:** campos cadastrais existem; **não há emissão de NF-e/NFC-e/NFS-e**. Recibo do PDV é não fiscal. Detalhes em [`docs/fiscal.md`](docs/fiscal.md).

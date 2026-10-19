@@ -1,0 +1,8 @@
+{
+  "name": "smartplanet",
+  "private": true,
+  "description": "ERP/PDV SmartPlanet na Vercel (PHP 8.5 via vercel-php)",
+  "engines": {
+    "node": ">=18"
+  }
+}

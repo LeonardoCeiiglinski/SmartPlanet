@@ -15,24 +15,24 @@ foreach ($catalog as $item) {
 }
 
 $headExtra = <<<HTML
-  <link rel="stylesheet" href="/legacy/css/styles.css">
   <link rel="stylesheet" href="/assets/labels-embed.css">
   <style id="estilo-pagina">@page { size: 104mm 21mm; margin: 0; }</style>
 HTML;
 
 $vPage = (string) (@filemtime(BASE_PATH . '/public/assets/labels-page.js') ?: time());
 $vApp = (string) (@filemtime(BASE_PATH . '/js/app.js') ?: time());
+$nonce = \App\Core\Security::nonceAttribute();
 $bodyEnd = <<<HTML
 <div id="area-impressao" aria-hidden="true"></div>
-<script src="/legacy/js/layout.js"></script>
-<script src="/legacy/js/barcode.js"></script>
-<script src="/legacy/js/render.js"></script>
-<script src="/legacy/js/tspl.js"></script>
-<script src="/assets/labels-page.js?v={$vPage}"></script>
-<script src="/legacy/js/app.js?v={$vApp}"></script>
+<script{$nonce} src="/legacy/js/layout.js"></script>
+<script{$nonce} src="/legacy/js/barcode.js"></script>
+<script{$nonce} src="/legacy/js/render.js"></script>
+<script{$nonce} src="/legacy/js/tspl.js"></script>
+<script{$nonce} src="/assets/labels-page.js?v={$vPage}"></script>
+<script{$nonce} src="/legacy/js/app.js?v={$vApp}"></script>
 HTML;
 ?>
-<script>
+<script<?= $nonce ?>>
 window.LABELS_CATALOG = <?= json_encode($catalogJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
@@ -49,10 +49,11 @@ window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_
     Não foi possível salvar no armazenamento do navegador. Os produtos ficarão disponíveis apenas enquanto esta página estiver aberta.
   </div>
 
-  <div class="conteudo">
+  <div class="conteudo labels-grid">
     <div class="coluna">
       <section class="cartao" aria-labelledby="titulo-montar">
         <h2 id="titulo-montar">Montar etiquetas</h2>
+        <div class="cartao-corpo">
         <?php if ($catalogJson === []): ?>
           <p class="dica">Nenhum produto cadastrado. <a href="/products">Cadastre o produto primeiro</a> para gerar etiquetas.</p>
         <?php else: ?>
@@ -78,10 +79,12 @@ window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_
           </div>
         <?php endif; ?>
         <div class="status" id="status" role="status" aria-live="polite"></div>
+        </div>
       </section>
 
       <section class="cartao" aria-labelledby="titulo-lista">
         <h2 id="titulo-lista">Fila de impressão <button type="button" class="destaque" id="botao-imprimir">Imprimir etiquetas</button></h2>
+        <div class="cartao-corpo">
         <div class="barra-lista">
           <div class="escopo" role="radiogroup" aria-label="O que imprimir">
             <label><input type="radio" name="escopo" value="todos"> Todas</label>
@@ -106,6 +109,7 @@ window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_
           <div id="lista-vazia" class="vazio-lista">Nenhum produto na fila. Busque um produto já cadastrado para gerar as etiquetas.</div>
         </div>
         <div class="totais" id="totais"></div>
+        </div>
       </section>
 
       <details class="cartao">
@@ -209,7 +213,7 @@ window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_
 
       <details class="cartao">
         <summary>Leitor nesta tela (opcional)</summary>
-        <p class="dica">O PDV já registra a venda ao bipar. Use esta área só se quiser conferir a etiqueta nesta página.</p>
+        <p class="dica">Conecte o receptor USB do Knup e bipe a etiqueta 1D. O produto cadastrado aparece aqui. A venda entra no PDV. Este leitor não lê QR Code.</p>
         <div class="campo">
           <label for="campo-leitor">Bipe a etiqueta</label>
           <input type="text" id="campo-leitor" autocomplete="off" spellcheck="false" placeholder="Aguardando a máquina de bipar…" inputmode="none">
@@ -239,6 +243,7 @@ window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_
     <div class="coluna labels-previa-coluna">
       <section class="cartao" aria-labelledby="titulo-previa">
         <h2 id="titulo-previa">Prévia da impressão</h2>
+        <div class="cartao-corpo">
         <div class="barra-previa">
           <div class="resumo-previa" id="resumo-previa"></div>
           <label class="zoom">Zoom
@@ -260,6 +265,7 @@ window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_
         </div>
         <div class="alerta" data-metodo="navegador">
           <p>Na janela de impressão: escala 100%, margens nenhuma, sem cabeçalhos nem rodapés.</p>
+        </div>
         </div>
       </section>
     </div>

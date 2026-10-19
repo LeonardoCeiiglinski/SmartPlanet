@@ -33,7 +33,7 @@ use App\Core\View;
       </tbody>
     </table></div>
     <?php if ((int) $job['invalid_rows'] === 0 && $job['status'] === 'validated'): ?>
-      <form method="post" action="/products/import/confirm" style="margin-top:12px" onsubmit="return confirm('Confirmar a gravação de <?= (int) $job['valid_rows'] ?> registros?')">
+      <form method="post" action="/products/import/confirm" style="margin-top:12px" data-confirm="Confirmar a gravação de <?= (int) $job['valid_rows'] ?> registros?">
         <?= Csrf::field() ?><input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
         <button type="submit" class="primary">Confirmar importação</button>
       </form>

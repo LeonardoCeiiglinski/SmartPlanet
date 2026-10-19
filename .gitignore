@@ -12,3 +12,4 @@
 !/storage/backups/.gitkeep
 /.phpunit.cache/
 *.local
+.vercel

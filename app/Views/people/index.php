@@ -17,6 +17,9 @@ $namePh = $type === 'customers' ? 'Ex.: João da Silva' : 'Ex.: Distribuidora Ex
         <div class="field"><label>CPF/CNPJ</label><input type="text" name="document" inputmode="numeric" data-mask="cpf_cnpj" placeholder="Ex.: 000.000.000-00 ou 00.000.000/0000-00"></div>
         <div class="field"><label>Telefone</label><input type="tel" name="phone" data-mask="phone" placeholder="Ex.: +55 (47) 9 9999-9999"></div>
         <div class="field"><label>E-mail</label><input type="email" name="email" placeholder="Ex.: contato@empresa.com.br"></div>
+        <?php if ($type === 'customers'): ?>
+        <div class="field"><label>Data de nascimento *</label><input type="date" name="birth_date" required max="<?= date('Y-m-d') ?>" min="1900-01-01"></div>
+        <?php endif ?>
         <div class="field"><label>Observações</label><input type="text" name="notes" placeholder="Ex.: Adicione informações complementares."></div>
       </div>
       <button type="submit" class="primary">Cadastrar</button>
@@ -30,14 +33,15 @@ $namePh = $type === 'customers' ? 'Ex.: João da Silva' : 'Ex.: Distribuidora Ex
     <button>Pesquisar</button>
   </form>
   <div class="table-wrap"><table>
-    <thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>E-mail</th><th>Situação</th></tr></thead>
+    <thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>E-mail</th><?php if ($type === 'customers'): ?><th>Nascimento</th><?php endif ?><th>Situação</th></tr></thead>
     <tbody>
     <?php foreach ($items as $item): ?>
       <tr><td><?= View::e($item['name']) ?></td><td><?= View::e($item['document'] ?: '—') ?></td>
         <td><?= View::e($item['phone'] ?: '—') ?></td><td><?= View::e($item['email'] ?: '—') ?></td>
+        <?php if ($type === 'customers'): ?><td><?= !empty($item['birth_date']) ? date('d/m/Y', strtotime((string) $item['birth_date'])) : '—' ?></td><?php endif ?>
         <td><span class="badge <?= $item['active'] ? 'ok' : 'danger' ?>"><?= $item['active'] ? 'Ativo' : 'Inativo' ?></span></td></tr>
     <?php endforeach; ?>
-    <?php if (!$items): ?><tr><td colspan="5" class="empty">Nenhum cadastro.</td></tr><?php endif; ?>
+    <?php if (!$items): ?><tr><td colspan="<?= $type === 'customers' ? 6 : 5 ?>" class="empty">Nenhum cadastro.</td></tr><?php endif; ?>
     </tbody>
   </table></div>
 </div></div>

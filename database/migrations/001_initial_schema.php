@@ -98,7 +98,7 @@ return [
         ){$options}";
         $sql[] = "CREATE TABLE customers (
             id {$id}, company_id {$big} NOT NULL, name VARCHAR(191) NOT NULL, document VARCHAR(20),
-            email VARCHAR(191), phone VARCHAR(30), address_json {$json}, notes TEXT,
+            email VARCHAR(191), phone VARCHAR(30), birth_date DATE, address_json {$json}, notes TEXT,
             active {$bool} NOT NULL DEFAULT 1, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL,
             UNIQUE (company_id, document), FOREIGN KEY (company_id) REFERENCES companies(id)
         ){$options}";

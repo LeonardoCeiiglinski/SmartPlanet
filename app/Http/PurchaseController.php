@@ -57,7 +57,21 @@ final class PurchaseController
             $this->service->receive($order, (int) ($_POST['location_id'] ?? 0),
                 (string) ($_POST['idempotency_key'] ?? ''), (array) ($_POST['quantities'] ?? []),
                 (string) ($_POST['notes'] ?? ''));
-            View::redirect('/purchases?id=' . $order, 'sucesso', 'Recebimento processado.');
+            View::redirect('/purchases?id=' . $order, 'sucesso', 'Recebimento processado. Contas a pagar geradas no financeiro.');
+        } catch (\Throwable $exception) {
+            Session::flash('erro', $exception->getMessage());
+            View::redirect('/purchases?id=' . $order);
+        }
+    }
+
+    public function cancel(): void
+    {
+        Auth::authorize('purchases.manage');
+        Csrf::enforce();
+        $order = (int) ($_POST['order_id'] ?? 0);
+        try {
+            $this->service->cancel($order, (string) ($_POST['reason'] ?? ''));
+            View::redirect('/purchases?id=' . $order, 'sucesso', 'Pedido cancelado sem movimento de estoque.');
         } catch (\Throwable $exception) {
             Session::flash('erro', $exception->getMessage());
             View::redirect('/purchases?id=' . $order);

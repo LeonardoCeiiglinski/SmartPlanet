@@ -19,11 +19,13 @@
 </form>
 <?php endif ?>
 <div class="panel"><div class="panel-body table-wrap"><table>
-<thead><tr><th>Vencimento</th><th>Descrição</th><th>Direção</th><th>Status</th><th class="num">Valor</th><th class="num">Liquidado</th><th>Ação</th></tr></thead>
+<thead><tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Origem</th><th>Direção</th><th>Status</th><th class="num">Valor</th><th class="num">Liquidado</th><th>Ação</th></tr></thead>
 <tbody><?php foreach ($entries as $e): ?>
 <tr>
   <td><?= View::e($e['due_date']) ?></td>
   <td><?= View::e($e['description']) ?><?php if ($e['customer_name'] || $e['supplier_name']): ?><br><small><?= View::e($e['customer_name'] ?: $e['supplier_name']) ?></small><?php endif ?></td>
+  <td><?= View::e($e['category_name'] ?? '—') ?></td>
+  <td><small><?= View::e(($e['source_type'] ?? '') . ' #' . ($e['source_id'] ?? '')) ?></small></td>
   <td><?= $e['direction'] === 'in' ? 'Entrada' : 'Saída' ?></td>
   <td><?= View::e($e['status']) ?></td>
   <td class="num">R$ <?= number_format((float) $e['amount'], 2, ',', '.') ?></td>
@@ -37,9 +39,16 @@
       <input name="amount" data-mask="money" value="<?= number_format((float) $e['amount'] - (float) $e['settled_amount'], 2, ',', '.') ?>" style="width:90px" placeholder="Ex.: 150,00">
       <button class="small">Liquidar</button>
     </form>
+    <?php if (($e['source_type'] ?? '') === 'manual' && (float) $e['settled_amount'] === 0.0): ?>
+    <form method="post" action="/finance/cancel" class="actions" data-confirm-twice="cancelar" data-confirm-item="<?= View::e($e['description']) ?>"><?= Csrf::field() ?>
+      <input type="hidden" name="entry_id" value="<?= (int) $e['id'] ?>">
+      <input name="reason" minlength="5" required placeholder="Ex.: Lançado em duplicidade">
+      <button class="small">Cancelar</button>
+    </form>
+    <?php endif ?>
     <?php endif ?>
   </td>
 </tr>
 <?php endforeach ?></tbody>
 </table></div></div>
-<p class="muted">Faturamento, recebimento, lucro e saldo de caixa são conceitos distintos. Este módulo registra contas e liquidações; o caixa físico é controlado em Caixa.</p>
+<p class="muted">Toda venda, compra, caixa, estoque e devolução gera lançamento classificado aqui. Não apague movimento operacional: cancele ou estorne na origem para reverter estoque e caixa juntos.</p>

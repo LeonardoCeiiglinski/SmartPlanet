@@ -2,7 +2,22 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/bootstrap.php';
+$bootstrap = null;
+foreach ([dirname(__DIR__) . '/app/bootstrap.php', __DIR__ . '/srv/app/bootstrap.php'] as $candidate) {
+    if (is_file($candidate)) {
+        $bootstrap = $candidate;
+        break;
+    }
+}
+if ($bootstrap === null) {
+    http_response_code(500);
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Content-Disposition: inline');
+    echo '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>SmartPlanet</title><body><h1>O sistema não abriu</h1><p>A Vercel está publicando só a pasta public, então o navegador recebia o programa em vez da página. Em Settings → General → Root Directory, apague public, salve e faça Redeploy.</p></body></html>';
+    exit;
+}
+header('Content-Disposition: inline');
+require $bootstrap;
 
 use App\Core\Auth;
 use App\Core\Csrf;
@@ -27,6 +42,30 @@ use App\Http\UserController;
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
+$static = [
+    '/favicon.png' => [__DIR__ . '/favicon.png', 'image/png'],
+    '/favicon.ico' => [__DIR__ . '/favicon.png', 'image/png'],
+];
+if (isset($static[$path]) && is_file($static[$path][0])) {
+    header('Content-Type: ' . $static[$path][1]);
+    header('Cache-Control: public, max-age=86400');
+    readfile($static[$path][0]);
+    exit;
+}
+if (str_starts_with($path, '/assets/')) {
+    $file = __DIR__ . $path;
+    $real = realpath($file);
+    $root = realpath(__DIR__ . '/assets');
+    if ($real && $root && str_starts_with($real, $root) && is_file($real)) {
+        $types = ['css' => 'text/css', 'js' => 'text/javascript', 'png' => 'image/png', 'svg' => 'image/svg+xml', 'woff2' => 'font/woff2'];
+        $ext = strtolower(pathinfo($real, PATHINFO_EXTENSION));
+        header('Content-Type: ' . ($types[$ext] ?? 'application/octet-stream') . '; charset=UTF-8');
+        header('Cache-Control: public, max-age=3600');
+        readfile($real);
+        exit;
+    }
+}
+
 if (str_starts_with($path, '/legacy/')) {
     $relative = substr($path, strlen('/legacy/'));
     $allowed = preg_match('#^(css/styles\.css|js/(app|layout|barcode|render|tspl)\.js)$#', $relative);
@@ -46,7 +85,9 @@ try {
 } catch (Throwable $exception) {
     http_response_code(503);
     echo '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Instalação necessária</title>';
-    echo '<body><h1>Instalação necessária</h1><p>Execute <code>php bin/migrate.php</code> e depois <code>php bin/install.php ...</code>.</p></body></html>';
+    echo '<body><h1>Instalação necessária</h1>';
+    echo '<p>Configure o MySQL na Vercel e as variáveis <code>DATABASE_URL</code> (ou <code>DB_*</code>), <code>INSTALL_EMAIL</code> e <code>INSTALL_PASSWORD</code>.</p>';
+    echo '<p>Em ambiente local: <code>php bin/migrate.php</code> e <code>php bin/install.php ...</code>.</p></body></html>';
     exit;
 }
 
@@ -125,6 +166,7 @@ $router->post('/stock/inventory/close', [$stock, 'inventoryClose']);
 $router->get('/purchases', [$purchases, 'index']);
 $router->post('/purchases/create', [$purchases, 'create']);
 $router->post('/purchases/receive', [$purchases, 'receive']);
+$router->post('/purchases/cancel', [$purchases, 'cancel']);
 $router->get('/users', [$users, 'index']);
 $router->get('/users/new', [$users, 'form']);
 $router->get('/users/edit', [$users, 'form']);
@@ -144,9 +186,11 @@ $router->post('/sales/return', [$management, 'returnSale']);
 $router->get('/quotes', [$management, 'quotes']);
 $router->post('/quotes/create', [$management, 'quoteCreate']);
 $router->post('/quotes/convert', [$management, 'quoteConvert']);
+$router->post('/quotes/cancel', [$management, 'quoteCancel']);
 $router->get('/finance', [$management, 'finance']);
 $router->post('/finance/create', [$management, 'financeCreate']);
 $router->post('/finance/settle', [$management, 'financeSettle']);
+$router->post('/finance/cancel', [$management, 'financeCancel']);
 $router->get('/reports', [$reports, 'index']);
 $router->get('/procedures', [$procedures, 'index']);
 $router->get('/cash', [$cash, 'index']);

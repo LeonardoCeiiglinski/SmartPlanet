@@ -16,19 +16,32 @@ final class Session
         session_set_cookie_params([
             'lifetime' => 0,
             'path' => '/',
-            'secure' => Env::bool('SESSION_SECURE', false),
+            'secure' => Env::bool('SESSION_SECURE', Paths::isHttps()),
             'httponly' => true,
-            'samesite' => 'Lax',
+            'samesite' => 'Strict',
         ]);
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
+        $driver = Env::get('SESSION_DRIVER', Paths::isServerless() ? 'database' : 'files');
+        if ($driver === 'database') {
+            $handler = new PdoSessionHandler(Database::connection());
+            session_set_save_handler($handler, true);
+        } elseif (Paths::isServerless()) {
+            session_save_path(Paths::writable('sessions'));
+        }
         session_start();
 
         $now = time();
-        $idle = Env::int('SESSION_IDLE_MINUTES', 120) * 60;
-        if (isset($_SESSION['_last_activity']) && $now - (int) $_SESSION['_last_activity'] > $idle) {
+        $idle = Env::int('SESSION_IDLE_MINUTES', 30) * 60;
+        $absolute = Env::int('SESSION_ABSOLUTE_HOURS', 12) * 3600;
+        $expired = (isset($_SESSION['_last_activity']) && $now - (int) $_SESSION['_last_activity'] > $idle)
+            || (isset($_SESSION['_started_at']) && $now - (int) $_SESSION['_started_at'] > $absolute);
+        if ($expired) {
             self::destroy();
             session_start();
+        }
+        if (!isset($_SESSION['_started_at'])) {
+            $_SESSION['_started_at'] = $now;
         }
         $_SESSION['_last_activity'] = $now;
     }

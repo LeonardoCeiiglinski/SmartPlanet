@@ -64,11 +64,12 @@ $menu = [
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . View::e($bodyClass) . '"' : '' ?>>
   <header class="app-topbar">
-    <button class="menu-toggle" type="button" aria-label="Abrir menu" onclick="document.body.classList.toggle('menu-open')">☰</button>
+    <button class="menu-toggle" type="button" aria-label="Abrir menu">☰</button>
     <a class="brand" href="/">
       <img src="/assets/logo-smartplanet.png" alt="">
       <span><strong>SmartPlanet</strong><small>a Boutique do Celular</small></span>
     </a>
+    <span id="scanner-live" class="scanner-live">Leitor USB pronto. Bipe um código 1D.</span>
     <span class="top-company"><?= View::e($user['name'] ?? '') ?> · <?= View::e($user['role_name'] ?? '') ?></span>
     <form method="post" action="/logout" class="top-logout">
       <?= Csrf::field() ?>
@@ -95,8 +96,10 @@ $menu = [
   </div>
   <div id="shell-end"><?= $bodyEnd ?? '' ?></div>
   <div id="shell-progress"></div>
-  <script src="/assets/forms.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/forms.js') ?: time()) ?>"></script>
-  <script src="/assets/shell.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/shell.js') ?: time()) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/scanner-wedge.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/scanner-wedge.js') ?: time()) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/scanner.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/scanner.js') ?: time()) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/forms.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/forms.js') ?: time()) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/shell.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/shell.js') ?: time()) ?>"></script>
 </body>
 </html>
 
