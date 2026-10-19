@@ -2,10 +2,19 @@
 
 declare(strict_types=1);
 
-$host = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? ''))[0]));
-$host = (string) preg_replace('/:\d+$/', '', $host);
-if ($host === 'pdv.lojadeeletronicossaojose.com.br') {
-    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+header('Content-Disposition: inline');
+header('X-Content-Type-Options: nosniff');
+
+function request_host(): string
+{
+    $raw = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? '';
+    $raw = strtolower(trim(explode(',', (string) $raw)[0]));
+
+    return (string) preg_replace('/:\d+$/', '', $raw);
+}
+
+function proxy_to_pdv(string $uri): void
+{
     $ch = curl_init('https://smart-planet-rouge.vercel.app' . $uri);
     $headers = [];
     if (function_exists('getallheaders')) {
@@ -35,9 +44,9 @@ if ($host === 'pdv.lojadeeletronicossaojose.com.br') {
     curl_close($ch);
     if (!is_string($response)) {
         http_response_code(502);
-        header('Content-Type: text/plain; charset=UTF-8');
-        echo 'O PDV não respondeu.';
-        exit;
+        header('Content-Type: text/html; charset=UTF-8');
+        echo '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>SmartPlanet</title><body><h1>O PDV não respondeu</h1></body></html>';
+        return;
     }
     http_response_code($status > 0 ? $status : 502);
     $rawHeaders = substr($response, 0, $headerSize);
@@ -51,7 +60,56 @@ if ($host === 'pdv.lojadeeletronicossaojose.com.br') {
         }
         header($line, false);
     }
+    header('Content-Disposition: inline');
     echo substr($response, $headerSize);
+}
+
+function serve_site_file(string $path): bool
+{
+    if ($path === '/favicon.ico') {
+        $path = '/assets/img/logo.png';
+    }
+    if ($path === '' || str_contains($path, '..') || str_contains($path, "\0")) {
+        return false;
+    }
+    $root = dirname(__DIR__) . '/public';
+    $file = $root . '/' . ltrim($path, '/');
+    $rootReal = realpath($root);
+    $fileReal = realpath($file);
+    if ($rootReal === false || $fileReal === false || !is_file($fileReal) || !str_starts_with($fileReal, $rootReal . DIRECTORY_SEPARATOR)) {
+        return false;
+    }
+    $types = [
+        'css' => 'text/css; charset=UTF-8',
+        'js' => 'text/javascript; charset=UTF-8',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+        'svg' => 'image/svg+xml',
+        'ico' => 'image/x-icon',
+        'woff2' => 'font/woff2',
+    ];
+    $ext = strtolower(pathinfo($fileReal, PATHINFO_EXTENSION));
+    if (!isset($types[$ext])) {
+        return false;
+    }
+    header('Content-Type: ' . $types[$ext]);
+    header('Cache-Control: public, max-age=86400');
+    readfile($fileReal);
+
+    return true;
+}
+
+if (request_host() === 'pdv.lojadeletronicossaojose.com.br') {
+    proxy_to_pdv($_SERVER['REQUEST_URI'] ?? '/');
+    exit;
+}
+
+$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$path = rawurldecode($path);
+if ($path !== '/' && serve_site_file($path)) {
     exit;
 }
 
