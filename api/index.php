@@ -5,12 +5,33 @@ declare(strict_types=1);
 header('Content-Disposition: inline');
 header('X-Content-Type-Options: nosniff');
 
-function request_host(): string
+function request_is_pdv(): bool
 {
-    $raw = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? '';
-    $raw = strtolower(trim(explode(',', (string) $raw)[0]));
+    $wanted = 'pdv.lojadeletronicossaojose.com.br';
+    $sources = [
+        $_SERVER['HTTP_HOST'] ?? '',
+        $_SERVER['HTTP_X_FORWARDED_HOST'] ?? '',
+        $_SERVER['HTTP_X_ORIGINAL_HOST'] ?? '',
+        $_SERVER['SERVER_NAME'] ?? '',
+    ];
+    if (function_exists('getallheaders')) {
+        foreach (getallheaders() as $name => $value) {
+            if (str_contains(strtolower((string) $name), 'host')) {
+                $sources[] = $value;
+            }
+        }
+    }
+    foreach ($sources as $raw) {
+        foreach (explode(',', (string) $raw) as $part) {
+            $host = strtolower(trim($part));
+            $host = (string) preg_replace('/:\d+$/', '', $host);
+            if ($host === $wanted) {
+                return true;
+            }
+        }
+    }
 
-    return (string) preg_replace('/:\d+$/', '', $raw);
+    return false;
 }
 
 function proxy_to_pdv(string $uri): void
@@ -58,6 +79,9 @@ function proxy_to_pdv(string $uri): void
         if (str_starts_with($lower, 'transfer-encoding:') || str_starts_with($lower, 'content-length:') || str_starts_with($lower, 'content-encoding:')) {
             continue;
         }
+        if (str_starts_with($lower, 'location:')) {
+            $line = preg_replace('#https://smart-planet-rouge\.vercel\.app#i', '', $line) ?? $line;
+        }
         header($line, false);
     }
     header('Content-Disposition: inline');
@@ -102,7 +126,7 @@ function serve_site_file(string $path): bool
     return true;
 }
 
-if (request_host() === 'pdv.lojadeletronicossaojose.com.br') {
+if (request_is_pdv()) {
     proxy_to_pdv($_SERVER['REQUEST_URI'] ?? '/');
     exit;
 }

@@ -9,6 +9,11 @@
     }
   },
   "routes": [
+    {
+      "src": "/(.*)",
+      "has": [{ "type": "host", "value": "pdv.lojadeletronicossaojose.com.br" }],
+      "dest": "https://smart-planet-rouge.vercel.app/$1"
+    },
     { "src": "/(.*)", "dest": "/api/index.php" }
   ]
 }
