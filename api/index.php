@@ -5,6 +5,28 @@ declare(strict_types=1);
 header('Content-Disposition: inline');
 header('X-Content-Type-Options: nosniff');
 
+if (($_GET['verhost'] ?? '') === '1') {
+    header('Content-Type: text/plain; charset=UTF-8');
+    header('Cache-Control: no-store');
+    $lines = [];
+    foreach ($_SERVER as $key => $value) {
+        if (!is_string($value)) {
+            continue;
+        }
+        $lower = strtolower((string) $key);
+        if (str_contains($lower, 'host') || str_contains($lower, 'forward') || str_contains($lower, 'vercel') || str_contains($lower, 'http_cf')) {
+            $lines[] = $key . '=' . $value;
+        }
+    }
+    if (function_exists('getallheaders')) {
+        foreach (getallheaders() as $name => $value) {
+            $lines[] = 'H:' . $name . '=' . $value;
+        }
+    }
+    echo implode("\n", $lines);
+    exit;
+}
+
 function request_is_pdv(): bool
 {
     $wanted = 'pdv.lojadeletronicossaojose.com.br';
