@@ -5,15 +5,6 @@ declare(strict_types=1);
 header('Content-Disposition: inline');
 header('X-Content-Type-Options: nosniff');
 
-$pathOnly = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-if ($pathOnly === '/__host') {
-    header('Content-Type: text/plain; charset=UTF-8');
-    header('Cache-Control: no-store');
-    echo 'host=' . ($_SERVER['HTTP_HOST'] ?? '') . "\n";
-    echo 'xfh=' . ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? '') . "\n";
-    exit;
-}
-
 function request_is_pdv(): bool
 {
     $wanted = 'pdv.lojadeletronicossaojose.com.br';
