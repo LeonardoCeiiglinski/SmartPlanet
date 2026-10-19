@@ -7,9 +7,19 @@
       "maxDuration": 10
     }
   },
-  "routes": [
-    { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
-    { "src": "/favicon.ico", "dest": "/public/assets/img/logo.png" },
-    { "src": "/(.*)", "dest": "/api/index.php" }
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "pdv.lojadeeletronicossaojose.com.br" }],
+      "destination": "https://smart-planet-rouge.vercel.app/"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "pdv.lojadeeletronicossaojose.com.br" }],
+      "destination": "https://smart-planet-rouge.vercel.app/:path*"
+    },
+    { "source": "/assets/:path*", "destination": "/public/assets/:path*" },
+    { "source": "/favicon.ico", "destination": "/public/assets/img/logo.png" },
+    { "source": "/(.*)", "destination": "/api/index.php" }
   ]
 }
