@@ -2,8 +2,14 @@
 
 declare(strict_types=1);
 
-$bootstrap = dirname(__DIR__) . '/app/bootstrap.php';
-if (!is_file($bootstrap)) {
+$bootstrap = null;
+foreach ([dirname(__DIR__) . '/app/bootstrap.php', __DIR__ . '/srv/app/bootstrap.php'] as $candidate) {
+    if (is_file($candidate)) {
+        $bootstrap = $candidate;
+        break;
+    }
+}
+if ($bootstrap === null) {
     http_response_code(500);
     header('Content-Type: text/html; charset=UTF-8');
     header('Content-Disposition: inline');

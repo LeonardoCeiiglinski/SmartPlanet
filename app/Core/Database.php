@@ -120,11 +120,9 @@ final class Database
         if (!$pgsql && !$mysql) {
             throw new \RuntimeException('Use DATABASE_URL Postgres (Supabase) ou MySQL.');
         }
-        if (getenv('DB_DRIVER') === false) {
-            $mapped = $pgsql ? 'pgsql' : 'mysql';
-            putenv('DB_DRIVER=' . $mapped);
-            $_ENV['DB_DRIVER'] = $mapped;
-        }
+        $mapped = $pgsql ? 'pgsql' : 'mysql';
+        putenv('DB_DRIVER=' . $mapped);
+        $_ENV['DB_DRIVER'] = $mapped;
         putenv('DB_HOST=' . $parts['host']);
         $_ENV['DB_HOST'] = $parts['host'];
         $port = (string) ($parts['port'] ?? ($pgsql ? 5432 : 3306));

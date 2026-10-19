@@ -7,7 +7,11 @@ use App\Core\Env;
 use App\Core\Session;
 
 if (!defined('BASE_PATH')) {
-    define('BASE_PATH', dirname(__DIR__));
+    $base = dirname(__DIR__);
+    if (!is_dir($base . '/database')) {
+        $base = dirname($base);
+    }
+    define('BASE_PATH', $base);
 }
 
 $composer = BASE_PATH . '/vendor/autoload.php';

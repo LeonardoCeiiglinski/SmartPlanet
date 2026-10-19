@@ -164,6 +164,7 @@ CREATE TABLE customers (
   document VARCHAR(20),
   email VARCHAR(191),
   phone VARCHAR(30),
+  birth_date DATE,
   address_json TEXT,
   notes TEXT,
   active INTEGER NOT NULL DEFAULT 1,
