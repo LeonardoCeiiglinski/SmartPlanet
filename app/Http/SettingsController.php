@@ -68,20 +68,45 @@ final class SettingsController
             View::redirect('/settings');
         }
         $pdo = Database::connection();
+        $companyId = (int) Auth::user()['company_id'];
+        $now = date('Y-m-d H:i:s');
         try {
             if ($type === 'units') {
+                $taken = $pdo->prepare('SELECT 1 FROM units WHERE company_id=:company AND upper(code)=:code');
+                $taken->execute(['company' => $companyId, 'code' => $code]);
+                if ($taken->fetchColumn()) {
+                    throw new \RuntimeException('duplicate');
+                }
                 $pdo->prepare(
                     'INSERT INTO units (company_id,code,name,decimal_places,active) VALUES (:company,:code,:name,:decimals,1)'
                 )->execute([
-                    'company' => Auth::user()['company_id'], 'code' => $code, 'name' => $name,
+                    'company' => $companyId, 'code' => $code, 'name' => $name,
                     'decimals' => max(0, min(4, (int) ($_POST['decimal_places'] ?? 0))),
                 ]);
+            } elseif ($type === 'categories') {
+                $taken = $pdo->prepare('SELECT 1 FROM categories WHERE company_id=:company AND name=:name AND parent_id IS NULL');
+                $taken->execute(['company' => $companyId, 'name' => $name]);
+                if ($taken->fetchColumn()) {
+                    throw new \RuntimeException('duplicate');
+                }
+                $pdo->prepare(
+                    'INSERT INTO categories (company_id,name,active,created_at,updated_at) VALUES (:company,:name,1,:at,:at)'
+                )->execute(['company' => $companyId, 'name' => $name, 'at' => $now]);
             } else {
-                $pdo->prepare("INSERT INTO {$type} (company_id,name,active) VALUES (:company,:name,1)")
-                    ->execute(['company' => Auth::user()['company_id'], 'name' => $name]);
+                $taken = $pdo->prepare('SELECT 1 FROM brands WHERE company_id=:company AND name=:name');
+                $taken->execute(['company' => $companyId, 'name' => $name]);
+                if ($taken->fetchColumn()) {
+                    throw new \RuntimeException('duplicate');
+                }
+                $pdo->prepare('INSERT INTO brands (company_id,name,active) VALUES (:company,:name,1)')
+                    ->execute(['company' => $companyId, 'name' => $name]);
             }
         } catch (\Throwable $exception) {
-            Session::flash('erro', 'Esse cadastro já existe.');
+            $state = $exception instanceof \PDOException ? (string) ($exception->errorInfo[0] ?? $exception->getCode()) : '';
+            $duplicate = $exception->getMessage() === 'duplicate'
+                || in_array($state, ['23000', '23505'], true)
+                || str_contains($exception->getMessage(), 'UNIQUE');
+            Session::flash('erro', $duplicate ? 'Esse cadastro já existe.' : 'Não foi possível salvar.');
             View::redirect('/settings');
         }
         Audit::log('dictionary.created', $type, (int) $pdo->lastInsertId());

@@ -178,6 +178,17 @@ final class FinanceLedger
             $cache = (bool) array_filter($cols, static fn (array $c): bool => ($c['name'] ?? '') === 'code');
             return $cache;
         }
+        if ($driver === 'pgsql') {
+            $stmt = $pdo->prepare(
+                "SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = current_schema()
+                   AND table_name = 'financial_categories'
+                   AND column_name = 'code'"
+            );
+            $stmt->execute();
+            $cache = (bool) $stmt->fetchColumn();
+            return $cache;
+        }
         $stmt = $pdo->query("SHOW COLUMNS FROM financial_categories LIKE 'code'");
         $cache = $stmt !== false && (bool) $stmt->fetch();
         return $cache;

@@ -30,6 +30,12 @@ $icon = static function (string $name): string {
     $inner = $paths[$name] ?? $paths['painel'];
     return '<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $inner . '</svg>';
 };
+$asset = static function (string $publicPath): string {
+    $file = dirname(__DIR__, 2) . '/public' . $publicPath;
+    $hash = is_file($file) ? md5_file($file) : false;
+    return $publicPath . '?v=' . ($hash !== false ? substr($hash, 0, 10) : (string) time());
+};
+$logo = $asset('/assets/logo-wordmark.png');
 $menu = [
     ['/', 'Painel', 'dashboard.view', 'painel'],
     ['/pos', 'PDV', 'pos.sell', 'pdv'],
@@ -54,20 +60,19 @@ $menu = [
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="csrf-token" content="<?= View::e(Csrf::token()) ?>">
   <title><?= View::e($title ?? 'SmartPlanet') ?> · SmartPlanet</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
-  <link rel="stylesheet" href="/assets/erp.css">
+  <link rel="icon" type="image/png" href="<?= View::e($asset('/favicon.png')) ?>">
+  <link rel="apple-touch-icon" href="<?= View::e($asset('/favicon.png')) ?>">
+  <link rel="stylesheet" href="<?= View::e($asset('/assets/erp.css')) ?>">
   <?= $headExtra ?? '' ?>
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . View::e($bodyClass) . '"' : '' ?>>
   <header class="app-topbar">
     <button class="menu-toggle" type="button" aria-label="Abrir menu">☰</button>
-    <a class="brand" href="/">
-      <img src="/assets/logo-smartplanet.png" alt="">
-      <span><strong>SmartPlanet</strong><small>a Boutique do Celular</small></span>
+    <a class="brand brand-top" href="/">
+      <img src="<?= View::e($logo) ?>" alt="SmartPlanet, a Boutique do Celular">
     </a>
     <span id="scanner-live" class="scanner-live">Leitor USB pronto. Bipe um código 1D.</span>
     <span class="top-company"><?= View::e($user['name'] ?? '') ?> · <?= View::e($user['role_name'] ?? '') ?></span>
@@ -78,6 +83,9 @@ $menu = [
   </header>
   <div class="app-shell">
     <aside class="sidebar">
+      <a class="brand brand-side" href="/">
+        <img src="<?= View::e($logo) ?>" alt="SmartPlanet, a Boutique do Celular">
+      </a>
       <nav>
         <?php foreach ($menu as [$url, $label, $permission, $iconName]): ?>
           <?php if (($url === '/users' ? Auth::isMaster() : Auth::can($permission))): ?>
@@ -96,10 +104,10 @@ $menu = [
   </div>
   <div id="shell-end"><?= $bodyEnd ?? '' ?></div>
   <div id="shell-progress"></div>
-  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/scanner-wedge.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/scanner-wedge.js') ?: time()) ?>"></script>
-  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/scanner.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/scanner.js') ?: time()) ?>"></script>
-  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/forms.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/forms.js') ?: time()) ?>"></script>
-  <script<?= \App\Core\Security::nonceAttribute() ?> src="/assets/shell.js?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/assets/shell.js') ?: time()) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="<?= View::e($asset('/assets/scanner-wedge.js')) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="<?= View::e($asset('/assets/scanner.js')) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="<?= View::e($asset('/assets/forms.js')) ?>"></script>
+  <script<?= \App\Core\Security::nonceAttribute() ?> src="<?= View::e($asset('/assets/shell.js')) ?>"></script>
 </body>
 </html>
 

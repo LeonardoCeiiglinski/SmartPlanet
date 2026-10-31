@@ -20,6 +20,8 @@ header('Content-Disposition: inline');
 require $bootstrap;
 
 use App\Core\Auth;
+use App\Domain\Sales\ProductDemand;
+use App\Domain\Sales\ProductDemandDocument;
 use App\Core\Csrf;
 use App\Core\Database;
 use App\Core\Router;
@@ -140,7 +142,23 @@ $router->get('/', static function (): void {
         'company5' => $company, 'company6' => $company, 'branch6' => $branch,
         'company7' => $company, 'branch7' => $branch,
     ]);
-    View::render('dashboard', ['title' => 'Painel', 'stats' => $stmt->fetch()]);
+    [$from, $to] = ProductDemand::period((string) ($_GET['from'] ?? ''), (string) ($_GET['to'] ?? ''));
+    $demand = ProductDemand::report($company, $branch, $from, $to);
+    View::render('dashboard', ['title' => 'Painel', 'stats' => $stmt->fetch(), 'demand' => $demand]);
+});
+
+$router->get('/painel/pdf', static function (): void {
+    Auth::requireLogin();
+    $user = Auth::user();
+    [$from, $to] = ProductDemand::period((string) ($_GET['from'] ?? ''), (string) ($_GET['to'] ?? ''));
+    $report = ProductDemand::report((int) $user['company_id'], (int) $user['branch_id'], $from, $to);
+    $binary = ProductDemandDocument::render($report);
+    $name = 'vendas-' . $report['from'] . '-' . $report['to'] . '.pdf';
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: inline; filename="' . $name . '"');
+    header('Content-Length: ' . strlen($binary));
+    header('Cache-Control: private, no-store');
+    echo $binary;
 });
 
 $router->get('/products', [$products, 'index']);
@@ -184,6 +202,7 @@ $router->get('/sales', [$sales, 'index']);
 $router->post('/sales/cancel', [$pos, 'cancel']);
 $router->post('/sales/return', [$management, 'returnSale']);
 $router->get('/quotes', [$management, 'quotes']);
+$router->get('/quotes/pdf', [$management, 'quotePdf']);
 $router->post('/quotes/create', [$management, 'quoteCreate']);
 $router->post('/quotes/convert', [$management, 'quoteConvert']);
 $router->post('/quotes/cancel', [$management, 'quoteCancel']);
@@ -194,7 +213,9 @@ $router->post('/finance/cancel', [$management, 'financeCancel']);
 $router->get('/reports', [$reports, 'index']);
 $router->get('/procedures', [$procedures, 'index']);
 $router->get('/cash', [$cash, 'index']);
+$router->get('/cash/pdf', [$cash, 'pdf']);
 $router->post('/cash/open', [$cash, 'open']);
+$router->post('/cash/assume', [$cash, 'assume']);
 $router->post('/cash/move', [$cash, 'move']);
 $router->post('/cash/close', [$cash, 'close']);
 

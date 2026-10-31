@@ -25,7 +25,7 @@ final class PosController
         $customers->execute(['company'=>$u['company_id']]);
         $recovered=Session::get('_pos_recovered');
         Session::forget('_pos_recovered');
-        View::render('pos/index',['title'=>'PDV','methods'=>$methods->fetchAll(),'customers'=>$customers->fetchAll(),'canDiscount'=>Auth::can('sales.discount'),'suspended'=>$this->service->suspended(),'recovered'=>is_array($recovered)?$recovered:null]);
+        View::render('pos/index',['title'=>'PDV','methods'=>$methods->fetchAll(),'customers'=>$customers->fetchAll(),'products'=>$this->service->catalog(),'canDiscount'=>Auth::can('sales.discount'),'suspended'=>$this->service->suspended(),'recovered'=>is_array($recovered)?$recovered:null]);
     }
 
     public function search(): void

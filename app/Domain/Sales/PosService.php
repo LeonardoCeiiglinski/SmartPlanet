@@ -52,6 +52,34 @@ final class PosService
         }, $stmt->fetchAll());
     }
 
+    /** @return array<int,array<string,mixed>> */
+    public function catalog(): array
+    {
+        $u = Auth::user();
+        $stmt = Database::connection()->prepare(
+            'SELECT p.id, p.internal_code, p.description, p.sale_price, p.promotional_price,
+                    p.promotion_starts_at, p.promotion_ends_at,
+                    (SELECT pb.barcode FROM product_barcodes pb
+                     WHERE pb.product_id = p.id
+                     ORDER BY pb.is_primary DESC, pb.id
+                     LIMIT 1) AS barcode
+             FROM products p
+             WHERE p.company_id = :company AND p.active = 1
+             ORDER BY p.description'
+        );
+        $stmt->execute(['company' => $u['company_id']]);
+        $now = date('Y-m-d H:i:s');
+
+        return array_map(static function (array $p) use ($now): array {
+            $promo = $p['promotional_price'] !== null
+                && (!$p['promotion_starts_at'] || $p['promotion_starts_at'] <= $now)
+                && (!$p['promotion_ends_at'] || $p['promotion_ends_at'] >= $now);
+            $p['price'] = $promo ? $p['promotional_price'] : $p['sale_price'];
+
+            return $p;
+        }, $stmt->fetchAll());
+    }
+
     /** @param array<int,array<string,mixed>> $items @param array<int,array<string,mixed>> $payments */
     public function complete(string $key, array $items, array $payments, ?int $customerId = null, string $notes = '', ?int $suspendedId = null): int
     {
@@ -72,12 +100,8 @@ final class PosService
             $subtotal = $discount = 0.0;
             foreach ($items as $line => $item) {
                 $quantity = self::decimal($item['quantity'] ?? null, 4);
-                $lineDiscount = self::decimal($item['discount'] ?? 0, 2);
-                if ($quantity <= 0 || $lineDiscount < 0) {
+                if ($quantity <= 0) {
                     throw new \InvalidArgumentException('Quantidade ou desconto inválido.');
-                }
-                if ($lineDiscount > 0 && !Auth::can('sales.discount')) {
-                    throw new \RuntimeException('Sem permissão para aplicar desconto.');
                 }
                 $stmt = $pdo->prepare('SELECT id,description,sale_price,promotional_price,promotion_starts_at,promotion_ends_at,track_stock,cost_price FROM products WHERE id=:id AND company_id=:company AND active=1');
                 $stmt->execute(['id' => (int) ($item['product_id'] ?? 0), 'company' => $u['company_id']]);
@@ -89,6 +113,10 @@ final class PosService
                 $promo = $product['promotional_price'] !== null && (!$product['promotion_starts_at'] || $product['promotion_starts_at'] <= $now) && (!$product['promotion_ends_at'] || $product['promotion_ends_at'] >= $now);
                 $price = (float) ($promo ? $product['promotional_price'] : $product['sale_price']);
                 $gross = round($price * $quantity, 2);
+                $lineDiscount = self::lineDiscount($item, $gross);
+                if ($lineDiscount > 0 && !Auth::can('sales.discount')) {
+                    throw new \RuntimeException('Sem permissão para aplicar desconto.');
+                }
                 if ($lineDiscount > $gross) {
                     throw new \InvalidArgumentException('Desconto excede o item.');
                 }
@@ -205,16 +233,20 @@ final class PosService
             }
             $safe=[];
             foreach($items as $item){
-                $qty=self::decimal($item['quantity']??null,4); $discount=self::decimal($item['discount']??0,2);
-                if($qty<=0||$discount<0) throw new \InvalidArgumentException('Item suspenso inválido.');
-                if($discount>0&&!Auth::can('sales.discount')) throw new \RuntimeException('Sem permissão para aplicar desconto.');
+                $qty=self::decimal($item['quantity']??null,4);
+                if($qty<=0) throw new \InvalidArgumentException('Item suspenso inválido.');
                 $p=$pdo->prepare('SELECT id,description,sale_price,promotional_price,promotion_starts_at,promotion_ends_at FROM products WHERE id=:id AND company_id=:company AND active=1');
                 $p->execute(['id'=>(int)($item['product_id']??0),'company'=>$u['company_id']]); $product=$p->fetch();
                 if(!$product) throw new \InvalidArgumentException('Produto inválido.');
                 $now=date('Y-m-d H:i:s'); $promo=$product['promotional_price']!==null&&(!$product['promotion_starts_at']||$product['promotion_starts_at']<=$now)&&(!$product['promotion_ends_at']||$product['promotion_ends_at']>=$now);
                 $price=(float)($promo?$product['promotional_price']:$product['sale_price']);
-                if($discount>round($price*$qty,2)) throw new \InvalidArgumentException('Desconto excede o item.');
-                $safe[]=['product_id'=>(int)$product['id'],'description'=>$product['description'],'price'=>$price,'quantity'=>$qty,'discount'=>$discount,'barcode'=>trim((string)($item['barcode']??''))];
+                $gross=round($price*$qty,2);
+                $discount=self::lineDiscount($item,$gross);
+                if($discount>0&&!Auth::can('sales.discount')) throw new \RuntimeException('Sem permissão para aplicar desconto.');
+                if($discount>$gross) throw new \InvalidArgumentException('Desconto excede o item.');
+                $mode=($item['discount_mode']??'money')==='percent'?'percent':'money';
+                $percent=$mode==='percent'?self::decimal($item['discount_percent']??0,2):0.0;
+                $safe[]=['product_id'=>(int)$product['id'],'description'=>$product['description'],'price'=>$price,'quantity'=>$qty,'discount'=>$discount,'discount_mode'=>$mode,'discount_percent'=>$percent,'barcode'=>trim((string)($item['barcode']??''))];
             }
             $now=date('Y-m-d H:i:s'); $payload=json_encode(['items'=>$safe,'customer_id'=>$customerId?:null,'notes'=>trim($notes)],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
             if($existingId){
@@ -311,6 +343,24 @@ final class PosService
         $stmt->execute(['company'=>$u['company_id'],'branch'=>$u['branch_id']]); $id=$stmt->fetchColumn();
         if(!$id) throw new \RuntimeException('Configure um local de estoque.'); return (int)$id;
     }
+    /** @param array<string,mixed> $item */
+    private static function lineDiscount(array $item, float $gross): float
+    {
+        $mode = ($item['discount_mode'] ?? 'money') === 'percent' ? 'percent' : 'money';
+        if ($mode === 'percent') {
+            $percent = self::decimal($item['discount_percent'] ?? 0, 2);
+            if ($percent < 0 || $percent > 100) {
+                throw new \InvalidArgumentException('Percentual de desconto inválido.');
+            }
+            return round($gross * $percent / 100, 2);
+        }
+        $amount = self::decimal($item['discount'] ?? 0, 2);
+        if ($amount < 0) {
+            throw new \InvalidArgumentException('Quantidade ou desconto inválido.');
+        }
+        return $amount;
+    }
+
     private static function decimal(mixed $v,int $scale): float {
         $v=str_replace(',','.',trim((string)$v)); if(!preg_match('/^-?\d{1,13}(?:\.\d{1,4})?$/',$v)) throw new \InvalidArgumentException('Valor numérico inválido.');
         return round((float)$v,$scale);

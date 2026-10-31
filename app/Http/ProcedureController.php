@@ -29,6 +29,7 @@ final class ProcedureController
                 'passos' => [
                     'Abra o Painel depois do login.',
                     'Confira vendas de hoje, total, ticket médio e se há caixa aberto.',
+                    'No bloco Vendas do período, filtre as datas e use PDF para ver o que mais vende e o que mais é procurado.',
                     'Se estoque baixo, a receber ou a pagar aparecerem, siga para Estoque, Financeiro ou Relatórios.',
                 ],
                 'regra' => 'Os números saem dos registros do banco. O painel não emite nota fiscal.',
@@ -102,7 +103,7 @@ final class ProcedureController
                 'menu' => 'Vendas',
                 'objetivo' => 'Consultar o que foi vendido, imprimir o recibo e corrigir com autorização.',
                 'passos' => [
-                    'Abra a venda pelo número para ver o recibo não fiscal.',
+                    'Abra a venda pelo número. Marque a via do cliente, a da loja ou as duas. Cada cupom sai com o nome da via. Imprimir solta só as vias marcadas, em papel de 58 mm.',
                     'Cancelar exige justificativa e devolve o estoque uma vez.',
                     'Na devolução, marque só a quantidade ainda não devolvida e se a peça volta ao estoque.',
                     'Estorno em dinheiro só ocorre com o caixa aberto.',
@@ -159,6 +160,7 @@ final class ProcedureController
                 'passos' => [
                     'Escolha o cliente ou deixe consumidor final, a validade e os produtos.',
                     'Salve. O orçamento não baixa estoque.',
+                    'Baixe o PDF em folha A4 para enviar ao cliente.',
                     'Quando o cliente fechar, converta em venda uma vez, com a forma de pagamento.',
                 ],
                 'regra' => 'A conversão usa o mesmo cuidado da venda: estoque e pagamento são gravados naquele momento.',

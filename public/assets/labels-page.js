@@ -91,20 +91,10 @@
     const form = document.getElementById('form-produto');
     const dialogo = document.getElementById('dialogo-etiqueta');
 
-    const usarBusca = () => {
-      const produto = localizar(busca && busca.value);
-      if (!produto) return;
-      aplicarCatalogo(produto);
-      if (busca) busca.value = '';
-    };
-
     if (busca) {
-      busca.addEventListener('change', usarBusca, on);
-      busca.addEventListener('keydown', (evento) => {
-        if (evento.key === 'Enter') {
-          evento.preventDefault();
-          usarBusca();
-        }
+      busca.addEventListener('change', () => {
+        const produto = catalog.find((item) => String(item.id) === String(busca.value));
+        if (produto) aplicarCatalogo(produto);
       }, on);
     }
 
@@ -126,7 +116,9 @@
             status.textContent = 'Escolha um produto já cadastrado. Cadastre-o em Produtos e serviços primeiro.';
             status.classList.add('erro');
           }
-          if (busca) busca.focus();
+          const visivel = document.getElementById('busca-catalogo-busca');
+          if (visivel) visivel.focus();
+          else if (busca) busca.focus();
           return;
         }
         aplicarCatalogo(produto);
@@ -167,7 +159,10 @@
 
     if (prefill && prefill.nome) {
       const produto = catalog.find((item) => mesmoProduto(item, prefill));
-      if (produto) aplicarCatalogo(produto);
+      if (produto) {
+        aplicarCatalogo(produto);
+        if (busca) busca.value = String(produto.id);
+      }
     }
   }
 

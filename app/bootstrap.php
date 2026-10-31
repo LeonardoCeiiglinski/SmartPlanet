@@ -41,12 +41,14 @@ ini_set('error_log', \App\Core\Paths::writable('logs/php-error.log'));
 
 set_exception_handler(static function (Throwable $exception): void {
     error_log((string) $exception);
+    $current = http_response_code();
+    $status = is_int($current) && $current >= 400 && $current <= 599 ? $current : 500;
     if (!headers_sent()) {
-        http_response_code(500);
+        http_response_code($status);
         header('Content-Type: text/html; charset=UTF-8');
         header('Content-Disposition: inline');
     }
-    $message = Env::bool('APP_DEBUG', false)
+    $message = (Env::bool('APP_DEBUG', false) || $status !== 500)
         ? htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8')
         : 'Ocorreu um erro interno. A operação não foi concluída.';
     echo '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Erro</title>';

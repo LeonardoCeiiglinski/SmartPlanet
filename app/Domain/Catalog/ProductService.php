@@ -59,6 +59,23 @@ final class ProductService
         ];
     }
 
+    /** @return array<int,array<string,mixed>> */
+    public function choices(): array
+    {
+        $user = Auth::user();
+        $stmt = Database::connection()->prepare(
+            'SELECT p.id, p.internal_code, p.description, p.active,
+                    (SELECT pb.barcode FROM product_barcodes pb
+                     WHERE pb.product_id = p.id AND pb.is_primary = 1 LIMIT 1) AS barcode
+             FROM products p
+             WHERE p.company_id = :company
+             ORDER BY p.active DESC, p.description'
+        );
+        $stmt->execute(['company' => (int) $user['company_id']]);
+
+        return $stmt->fetchAll();
+    }
+
     /** @return array<string,mixed>|null */
     public function find(int $id): ?array
     {

@@ -24,13 +24,12 @@ final class LabelController
         Auth::authorize('labels.print');
         $user = Auth::user();
         $stmt = Database::connection()->prepare(
-            'SELECT p.id, p.description, p.sale_price,
+            'SELECT p.id, p.internal_code, p.description, p.sale_price,
                     (SELECT pb.barcode FROM product_barcodes pb
                      WHERE pb.product_id = p.id AND pb.is_primary = 1 LIMIT 1) AS barcode
              FROM products p
              WHERE p.company_id = :company AND p.active = 1
-             ORDER BY p.description
-             LIMIT 400'
+             ORDER BY p.description'
         );
         $stmt->execute(['company' => $user['company_id']]);
 

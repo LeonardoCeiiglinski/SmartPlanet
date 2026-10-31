@@ -129,9 +129,9 @@ h3 { font-size: 1.2rem; line-height: 1.25; margin: 0 0 0.3rem; }
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(200px, 0.62fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.2fr);
   gap: 1.6rem 2rem;
-  align-items: end;
+  align-items: center;
   padding: 2.2rem max(1rem, calc((100% - 1120px) / 2)) 1.8rem;
   background: var(--ink);
   color: var(--white);
@@ -147,7 +147,7 @@ h3 { font-size: 1.2rem; line-height: 1.25; margin: 0 0 0.3rem; }
   transition: transform .6s ease;
 }
 .hero-photo:hover img, .store-photo:hover img { transform: scale(1.025); }
-.hero-photo img { max-height: 440px; }
+.hero-photo img { max-height: none; object-fit: contain; object-position: center; background: #111; }
 .hero-photo figcaption, .store-photo figcaption {
   margin-top: 0.4rem;
   font-size: 0.84rem;
@@ -184,7 +184,7 @@ h3 { font-size: 1.2rem; line-height: 1.25; margin: 0 0 0.3rem; }
 .btn.ghost { color: var(--white); border: 1px solid var(--line); background: transparent; }
 .btn.ghost:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-1px); }
 .btn:active { transform: translateY(0); }
-.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; margin: 0; }
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.8rem; margin: 0; }
 .facts dt, .nap dt {
   color: var(--gold);
   font-size: 0.72rem;
@@ -480,8 +480,8 @@ h3 { font-size: 1.2rem; line-height: 1.25; margin: 0 0 0.3rem; }
   }
   .band { display: grid; }
   .hero { padding-top: 1.5rem; }
-  .hero-photo img { max-height: 280px; }
-  .top-bar { display: none; }
+  .hero-photo img { max-height: none; }
+  .top-bar { flex-wrap: wrap; letter-spacing: 0.03em; font-size: 0.68rem; }
   .foot { padding-bottom: max(5.6rem, calc(4.6rem + env(safe-area-inset-bottom))); }
 }
 

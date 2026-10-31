@@ -9,8 +9,8 @@ use App\Core\View;
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= View::e($title ?? 'Acesso') ?> · SmartPlanet</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="icon" type="image/png" href="/favicon.png?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/favicon.png') ?: time()) ?>">
+  <link rel="apple-touch-icon" href="/favicon.png?v=<?= (int) (@filemtime(dirname(__DIR__, 2) . '/public/favicon.png') ?: time()) ?>">
   <link rel="stylesheet" href="/assets/erp.css">
   <link rel="stylesheet" href="/assets/login.css">
   <meta name="referrer" content="no-referrer">

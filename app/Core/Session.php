@@ -89,7 +89,18 @@ final class Session
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'] ?? '', $params['secure'], $params['httponly']);
+            $options = [
+                'expires' => time() - 42000,
+                'path' => ($params['path'] ?? '') !== '' ? (string) $params['path'] : '/',
+                'secure' => (bool) ($params['secure'] ?? false),
+                'httponly' => (bool) ($params['httponly'] ?? true),
+                'samesite' => is_string($params['samesite'] ?? null) && $params['samesite'] !== '' ? $params['samesite'] : 'Lax',
+            ];
+            $domain = $params['domain'] ?? '';
+            if (is_string($domain) && $domain !== '') {
+                $options['domain'] = $domain;
+            }
+            setcookie(session_name(), '', $options);
         }
         session_destroy();
     }

@@ -26,6 +26,7 @@ final class ProductController
             'title' => 'Produtos e serviços',
             'result' => $this->service->paginate($search, $page),
             'search' => $search,
+            'choices' => $this->service->choices(),
         ]);
     }
 

@@ -64,4 +64,11 @@
   </div>
 </section>
 
+<section class="prose visit-note" data-reveal="fade">
+  <h2>Marca do celular</h2>
+  <p>iPhone tem página própria porque a loja trabalha com capinha, película e carregador Lightning ou USB-C para esse aparelho. <a href="/iphone">Ver acessórios para iPhone</a>.</p>
+  <p>Samsung, Motorola e Xiaomi não têm uma página por marca. O encaixe muda a cada modelo, e o site não publica o estoque de cada um. Envie a marca e o modelo no WhatsApp. A mesma regra vale para outra marca.</p>
+  <p>Película, carregador e fone também têm página separada: <a href="/peliculas">películas</a>, <a href="/carregadores">carregadores e cabos</a>, <a href="/fones">fones</a> e <a href="/linha-gamer">linha gamer</a>.</p>
+</section>
+
 <p class="section-more">A loja não publica preço nem estoque nesta página. Os dois são confirmados na conversa. <a class="text-link" href="/contato">Chamar no WhatsApp com o modelo</a>.</p>

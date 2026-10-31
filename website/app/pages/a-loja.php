@@ -11,12 +11,13 @@
   </figure>
   <div class="store-copy" data-reveal>
     <h2>Como encontrar a SmartPlanet</h2>
-    <p>O ponto de referência é o mercado Direto do Campo, no número 34 da mesma avenida. Campinas é o bairro, em São José/SC.</p>
+    <p>O ponto de referência é o mercado Direto do Campo, no número 34 da mesma avenida. O Grauvi Empório Natural fica nesse mesmo endereço. Campinas é o bairro, em São José/SC.</p>
+    <p>A foto ao lado é o interior: balcão, parede de capinhas e películas e o painel GAMER. A fachada da galeria não está neste site.</p>
     <dl class="nap">
       <div><dt>Endereço</dt><dd><?= e(SITE_STREET) ?><br><?= e(SITE_PLACE) ?><br><?= e(SITE_CEP) ?></dd></div>
       <div><dt>Referência</dt><dd><?= e(SITE_REF) ?></dd></div>
       <div><dt>WhatsApp</dt><dd><a href="<?= e(wa_link('Oi, vim pelo site da SmartPlanet. Quero ir até a loja.')) ?>" rel="noopener noreferrer" title="Chamar no WhatsApp"><?= e(SITE_PHONE_HUMAN) ?></a></dd></div>
-      <div><dt>Horário</dt><dd>O horário de funcionamento não está neste site. Consulte pelo WhatsApp antes de ir.</dd></div>
+      <div><dt>Horário</dt><dd><?= e(SITE_HOURS) ?></dd></div>
     </dl>
     <p><a class="btn gold" href="/onde-estamos">Ver como chegar</a></p>
   </div>

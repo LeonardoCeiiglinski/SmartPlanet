@@ -96,7 +96,21 @@
       beep(false);
       return;
     }
-    campo.value = evento.detail.code;
+    if (campo.tagName === 'SELECT') {
+      var code = String(evento.detail.code || '');
+      var match = null;
+      for (var i = 0; i < campo.options.length; i++) {
+        var opt = campo.options[i];
+        if (opt.value === code || opt.dataset.code === code || opt.dataset.barcode === code) {
+          match = opt;
+          break;
+        }
+      }
+      if (!match) match = new Option(code, code, true, true);
+      campo.value = match.value;
+    } else {
+      campo.value = evento.detail.code;
+    }
     flash('Buscando ' + evento.detail.code, true);
     beep(true);
     if (typeof campo.form.requestSubmit === 'function') campo.form.requestSubmit();

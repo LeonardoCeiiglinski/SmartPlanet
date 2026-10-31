@@ -1,6 +1,13 @@
 (function () {
   'use strict';
 
+  document.addEventListener('touchmove', function (event) {
+    if (event.touches.length > 1) event.preventDefault();
+  }, { passive: false });
+  document.addEventListener('gesturestart', function (event) {
+    event.preventDefault();
+  });
+
   const progress = document.getElementById('shell-progress');
   const main = () => document.querySelector('.main-content');
   let inflight = 0;
@@ -13,13 +20,13 @@
     if (url.origin !== location.origin) return false;
     if (url.pathname.startsWith('/legacy/') || url.pathname.startsWith('/assets/')) return false;
     if (url.pathname === '/login' || url.pathname === '/logout' || url.pathname === '/forgot' || url.pathname === '/reset') return false;
-    if (/\/(export|template)$/.test(url.pathname)) return false;
+    if (/\/(export|template|pdf)$/.test(url.pathname)) return false;
     return true;
   }
 
   function setActive(href) {
     const current = new URL(href, location.origin);
-    document.querySelectorAll('.sidebar a').forEach((link) => {
+    document.querySelectorAll('.sidebar nav a').forEach((link) => {
       const target = new URL(link.getAttribute('href'), location.origin);
       let on = false;
       if (target.pathname === '/people') {
@@ -125,7 +132,13 @@
       document.body.className = doc.body.className;
       const csrf = doc.querySelector('meta[name="csrf-token"]');
       const localCsrf = document.querySelector('meta[name="csrf-token"]');
-      if (csrf && localCsrf) localCsrf.setAttribute('content', csrf.getAttribute('content') || '');
+      if (csrf && localCsrf) {
+        const value = csrf.getAttribute('content') || '';
+        localCsrf.setAttribute('content', value);
+        document.querySelectorAll('input[name="_csrf"]').forEach((input) => {
+          input.value = value;
+        });
+      }
 
       document.querySelectorAll('[data-shell-extra]').forEach((node) => node.remove());
       extraHead(doc).forEach((node) => {

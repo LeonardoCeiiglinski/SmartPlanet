@@ -53,8 +53,10 @@ $canonical = site_url($path);
 $robots = $found ? 'index, follow, max-image-preview:large' : 'noindex, follow';
 $description = $page['description'];
 $title = $page['title'];
-$ogImage = site_url('/assets/img/loja.jpg');
-$imageAlt = 'Balcão da loja SmartPlanet com capinhas e cabos, em Campinas, São José/SC';
+$ogImage = site_url('/assets/img/og-loja.jpg');
+$ogWidth = 1200;
+$ogHeight = 630;
+$imageAlt = 'Interior da SmartPlanet, com o balcão, a parede de capinhas e películas e o painel gamer, em Campinas, São José/SC';
 
 $crumbs = [['name' => 'Início', 'path' => '/']];
 if ($path !== '/' && !empty($page['crumb'])) {
@@ -72,19 +74,25 @@ $address = [
 $graph = [];
 if ($path === '/') {
     $graph[] = [
-        '@type' => 'LocalBusiness',
+        '@type' => 'MobilePhoneStore',
         '@id' => site_url('/') . '#loja',
         'name' => SITE_NAME,
-        'alternateName' => SITE_TAG,
-        'description' => 'Loja de acessórios para celular no bairro Campinas, em São José/SC.',
+        'alternateName' => 'SmartPlanet a Boutique do Celular',
+        'description' => 'Loja de acessórios para celular e eletrônicos no bairro Campinas, em São José/SC.',
         'url' => site_url('/'),
-        'image' => [site_url('/assets/img/loja.jpg'), site_url('/assets/img/logo.png')],
-        'telephone' => '+55 48 99662-8811',
+        'image' => [site_url('/assets/img/og-loja.jpg'), site_url('/assets/img/loja.jpg')],
+        'telephone' => '+5548996628811',
         'address' => $address,
         'geo' => [
             '@type' => 'GeoCoordinates',
             'latitude' => SITE_LAT,
             'longitude' => SITE_LNG,
+        ],
+        'areaServed' => [
+            ['@type' => 'City', 'name' => 'São José'],
+            ['@type' => 'City', 'name' => 'Florianópolis'],
+            ['@type' => 'City', 'name' => 'Palhoça'],
+            ['@type' => 'City', 'name' => 'Biguaçu'],
         ],
         'sameAs' => [SITE_INSTAGRAM, SITE_FACEBOOK],
         'hasMap' => maps_link(),
@@ -95,7 +103,7 @@ if ($path === '/') {
         'name' => SITE_NAME,
         'url' => site_url('/'),
         'logo' => site_url('/assets/img/logo.png'),
-        'telephone' => '+55 48 99662-8811',
+        'telephone' => '+5548996628811',
         'address' => $address,
         'sameAs' => [SITE_INSTAGRAM, SITE_FACEBOOK],
     ];
@@ -120,9 +128,10 @@ if ($found && count($crumbs) > 1) {
     }
     $graph[] = ['@type' => 'BreadcrumbList', 'itemListElement' => $items];
 }
-if ($path === '/entrega') {
+$faqs = site_faqs($path);
+if ($faqs !== []) {
     $questions = [];
-    foreach (site_delivery_faq() as $item) {
+    foreach ($faqs as $item) {
         $questions[] = [
             '@type' => 'Question',
             'name' => $item['q'],

@@ -44,18 +44,55 @@
     return '';
   }
 
+  function phoneDigits(value) {
+    var raw = String(value || '');
+    var plus = raw.search(/\+55/);
+    var d;
+    if (plus >= 0) d = digits(raw.slice(0, plus)) + digits(raw.slice(plus + 3));
+    else {
+      d = digits(raw);
+      if (d.startsWith('55') && d.length > 11) d = d.slice(2);
+    }
+    return d.slice(0, 11);
+  }
+
   function formatPhone(value) {
-    var d = digits(value);
-    if (d.startsWith('55') && d.length > 11) d = d.slice(2);
-    else if (d.startsWith('55') && d.length >= 12) d = d.slice(2);
-    d = d.slice(0, 11);
-    if (!d) return '';
+    var raw = String(value || '');
+    var hasPrefix = raw.search(/\+55/) >= 0;
+    var d = phoneDigits(value);
+    if (!d) return hasPrefix ? '+55 ' : '';
     var out = '+55';
     if (d.length <= 2) return out + ' (' + d;
     out += ' (' + d.slice(0, 2) + ') ';
-    if (d.length <= 6) return out + d.slice(2);
-    if (d.length <= 10) return out + d.slice(2, 6) + '-' + d.slice(6);
-    return out + d.slice(2, 3) + ' ' + d.slice(3, 7) + '-' + d.slice(7, 11);
+    var rest = d.slice(2);
+    if (rest.length <= 4) return out + rest;
+    if (rest.charAt(0) === '9') {
+      if (rest.length <= 5) return out + rest.charAt(0) + ' ' + rest.slice(1);
+      return out + rest.charAt(0) + ' ' + rest.slice(1, 5) + '-' + rest.slice(5);
+    }
+    return out + rest.slice(0, 4) + '-' + rest.slice(4);
+  }
+
+  function phoneDigitsBeforeCaret(raw, cursor) {
+    return phoneDigits(String(raw || '').slice(0, cursor)).length;
+  }
+
+  function caretAfterPhoneDigits(formatted, count) {
+    if (!count) {
+      var at = formatted.indexOf('+55');
+      return at >= 0 ? Math.min(formatted.length, at + 4) : 0;
+    }
+    var plus = formatted.indexOf('+55');
+    var start = plus >= 0 ? plus + 3 : 0;
+    var seen = 0;
+    for (var i = start; i < formatted.length; i++) {
+      var ch = formatted.charAt(i);
+      if (ch >= '0' && ch <= '9') {
+        seen++;
+        if (seen === count) return i + 1;
+      }
+    }
+    return formatted.length;
   }
 
   function formatCpf(value) {
@@ -296,8 +333,14 @@
       }
       if (isPhonePrefixOnly(el.value)) {
         el.value = '+55 ';
+        try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {}
         return;
       }
+      var typed = phoneDigitsBeforeCaret(el.value, el.selectionStart);
+      applyMask(el, mask);
+      var pos = caretAfterPhoneDigits(el.value, typed);
+      try { el.setSelectionRange(pos, pos); } catch (e) {}
+      return;
     }
     applyMask(el, mask);
   }
@@ -305,7 +348,11 @@
   function onFocus(event) {
     var el = event.target;
     if (!(el instanceof HTMLInputElement)) return;
-    if ((el.dataset.mask || inferMask(el)) === 'phone' && !el.value) el.value = '+55 ';
+    if ((el.dataset.mask || inferMask(el)) === 'phone' && !el.value) {
+      el.value = '+55 ';
+      var end = el.value.length;
+      try { el.setSelectionRange(end, end); } catch (e) {}
+    }
   }
 
   function onBlur(event) {

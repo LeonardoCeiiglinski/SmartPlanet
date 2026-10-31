@@ -13,7 +13,7 @@
     <table><thead><tr><th>Produto</th><th>Qtd.</th><th>Desconto</th></tr></thead><tbody>
       <?php for ($i = 0; $i < 4; $i++): ?>
       <tr>
-        <td><select name="items[<?= $i ?>][product_id]"><option value="">Selecione uma opção...</option><?php foreach ($products as $p): ?><option value="<?= (int) $p['id'] ?>"><?= View::e($p['description']) ?> · R$ <?= number_format((float) $p['sale_price'], 2, ',', '.') ?></option><?php endforeach ?></select></td>
+        <td><select name="items[<?= $i ?>][product_id]"><option value="">Selecione uma opção...</option><?php foreach ($products as $p): ?><option value="<?= (int) $p['id'] ?>"><?= View::e(trim((string) ($p['internal_code'] ?? '')) !== '' ? $p['internal_code'] . ' · ' . $p['description'] : $p['description']) ?> · R$ <?= number_format((float) $p['sale_price'], 2, ',', '.') ?></option><?php endforeach ?></select></td>
         <td><input name="items[<?= $i ?>][quantity]" value="<?= $i === 0 ? '1' : '' ?>" placeholder="Ex.: 1"></td>
         <td><input name="items[<?= $i ?>][discount]" data-mask="money" value="0" placeholder="Ex.: 10,00"></td>
       </tr>
@@ -27,6 +27,7 @@
 <div class="panel-body">
   <table><tbody><?php foreach ($detail['items'] as $item): ?><tr><td><?= View::e($item['description']) ?></td><td class="num"><?= number_format((float) $item['quantity'], 3, ',', '.') ?></td><td class="num">R$ <?= number_format((float) $item['subtotal'], 2, ',', '.') ?></td></tr><?php endforeach ?></tbody></table>
   <p class="num"><strong>Total R$ <?= number_format((float) $detail['total'], 2, ',', '.') ?></strong></p>
+  <p><a class="button primary" href="/quotes/pdf?id=<?= (int) $detail['id'] ?>" download>Baixar orçamento em PDF</a></p>
   <?php if (Auth::can('pos.sell') && in_array($detail['status'], ['open', 'approved'], true)): ?>
   <form method="post" action="/quotes/convert"><?= Csrf::field() ?>
     <input type="hidden" name="quote_id" value="<?= (int) $detail['id'] ?>">
@@ -44,6 +45,6 @@
 </div></div>
 <?php endif ?>
 <div class="panel"><div class="panel-body table-wrap"><table>
-<thead><tr><th>Número</th><th>Cliente</th><th>Status</th><th>Validade</th><th class="num">Total</th></tr></thead>
-<tbody><?php foreach ($quotes as $q): ?><tr><td><a href="/quotes?id=<?= (int) $q['id'] ?>"><?= View::e($q['quote_number']) ?></a></td><td><?= View::e($q['customer_name'] ?? 'Consumidor final') ?></td><td><?= View::e($q['status']) ?></td><td><?= View::e($q['valid_until'] ?? '') ?></td><td class="num">R$ <?= number_format((float) $q['total'], 2, ',', '.') ?></td></tr><?php endforeach ?></tbody>
+<thead><tr><th>Número</th><th>Cliente</th><th>Status</th><th>Validade</th><th class="num">Total</th><th></th></tr></thead>
+<tbody><?php foreach ($quotes as $q): ?><tr><td><a href="/quotes?id=<?= (int) $q['id'] ?>"><?= View::e($q['quote_number']) ?></a></td><td><?= View::e($q['customer_name'] ?? 'Consumidor final') ?></td><td><?= View::e($q['status']) ?></td><td><?= View::e($q['valid_until'] ?? '') ?></td><td class="num">R$ <?= number_format((float) $q['total'], 2, ',', '.') ?></td><td><a href="/quotes/pdf?id=<?= (int) $q['id'] ?>" download>PDF</a></td></tr><?php endforeach ?></tbody>
 </table></div></div>

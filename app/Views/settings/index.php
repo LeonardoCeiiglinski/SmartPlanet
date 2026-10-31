@@ -34,7 +34,11 @@ use App\Core\View;
           <div class="field"><label>Nome *</label><input type="text" name="name" required placeholder="<?= $key === 'categories' ? 'Ex.: Acessórios' : ($key === 'brands' ? 'Ex.: Samsung' : 'Ex.: Unidade') ?>"></div>
           <button>Adicionar</button>
         </form>
-        <ul><?php foreach ($items as $item): ?><li><?= View::e(($item['code'] ?? '') . (($item['code'] ?? '') ? ' — ' : '') . $item['name']) ?></li><?php endforeach; ?></ul>
+        <?php if ($items): ?>
+          <ul class="dict-list"><?php foreach ($items as $item): ?><li><?= View::e(($item['code'] ?? '') . (($item['code'] ?? '') ? ' — ' : '') . $item['name']) ?></li><?php endforeach; ?></ul>
+        <?php else: ?>
+          <p class="muted">Nenhuma cadastrada ainda.</p>
+        <?php endif; ?>
       </div>
     </div>
   <?php endforeach; ?>

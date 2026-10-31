@@ -10,7 +10,9 @@ foreach ($catalog as $item) {
         'preco' => number_format((float) $item['sale_price'], 2, ',', '.'),
         'precoCentavos' => (int) round(((float) $item['sale_price']) * 100),
         'codigo' => (string) ($item['barcode'] ?? ''),
-        'label' => trim($item['description'] . ' · ' . ($item['barcode'] ?: 'sem código')),
+        'label' => trim((string) ($item['internal_code'] ?? '')) !== ''
+            ? $item['internal_code'] . ' · ' . $item['description']
+            : (string) $item['description'],
     ];
 }
 
@@ -19,7 +21,7 @@ $headExtra = <<<HTML
   <style id="estilo-pagina">@page { size: 104mm 21mm; margin: 0; }</style>
 HTML;
 
-$vPage = (string) (@filemtime(BASE_PATH . '/public/assets/labels-page.js') ?: time());
+$vPage = substr(md5_file(BASE_PATH . '/public/assets/labels-page.js') ?: '', 0, 10);
 $vApp = (string) (@filemtime(BASE_PATH . '/js/app.js') ?: time());
 $nonce = \App\Core\Security::nonceAttribute();
 $bodyEnd = <<<HTML
@@ -59,12 +61,12 @@ window.LABELS_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_
         <?php else: ?>
           <div class="campo">
             <label for="busca-catalogo">Produto cadastrado</label>
-            <input type="search" id="busca-catalogo" list="lista-catalogo" placeholder="Digite para pesquisar o produto cadastrado..." autocomplete="off">
-            <datalist id="lista-catalogo">
+            <select id="busca-catalogo">
+              <option value="">Selecione uma opção...</option>
               <?php foreach ($catalogJson as $item): ?>
-                <option value="<?= View::e($item['label']) ?>"></option>
+                <option value="<?= (int) $item['id'] ?>"><?= View::e($item['label']) ?></option>
               <?php endforeach; ?>
-            </datalist>
+            </select>
             <span class="dica">A etiqueta só é gerada para produto já cadastrado em <a href="/products">Produtos e serviços</a>.</span>
           </div>
           <div id="resumo-catalogo" class="resumo-catalogo" hidden></div>

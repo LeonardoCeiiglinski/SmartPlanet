@@ -32,18 +32,19 @@ $robots = $robots ?? 'index,follow';
   <meta property="og:description" content="<?= e($description) ?>">
   <meta property="og:url" content="<?= e($canonical) ?>">
   <meta property="og:image" content="<?= e($ogImage) ?>">
-  <meta property="og:image:alt" content="<?= e($imageAlt ?? 'Balcão da loja SmartPlanet com capinhas e cabos, em Campinas, São José/SC') ?>">
-  <meta property="og:image:width" content="330">
-  <meta property="og:image:height" content="437">
+  <meta property="og:image:alt" content="<?= e($imageAlt ?? 'Interior da SmartPlanet, em Campinas, São José/SC') ?>">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="<?= (int) ($ogWidth ?? 1200) ?>">
+  <meta property="og:image:height" content="<?= (int) ($ogHeight ?? 630) ?>">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="<?= e($title) ?>">
   <meta name="twitter:description" content="<?= e($description) ?>">
   <meta name="twitter:image" content="<?= e($ogImage) ?>">
-  <link rel="icon" type="image/png" href="/assets/img/logo.png">
+  <link rel="icon" type="image/png" href="/assets/img/logo.png?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,480;0,6..72,620;1,6..72,480&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/site.css">
+  <link rel="stylesheet" href="/assets/css/site.css?v=4">
   <?php if ($jsonLd !== ''): ?><script type="application/ld+json"><?= $jsonLd ?></script><?php endif ?>
   <script>document.documentElement.classList.add('js')</script>
 </head>
@@ -52,12 +53,12 @@ $robots = $robots ?? 'index,follow';
   <div class="progress" data-progress hidden></div>
   <header class="top" data-top>
     <div class="top-bar">
-      <p><?= e(SITE_PLACE) ?> · <?= e(SITE_REF) ?></p>
+      <p><?= e(SITE_PLACE) ?> · <?= e(SITE_REF) ?> · Horário: confirme no WhatsApp</p>
       <a href="<?= e(wa_link('Oi, vim pelo site da SmartPlanet.')) ?>" rel="noopener noreferrer" title="Chamar no WhatsApp <?= e(SITE_PHONE_HUMAN) ?>">WhatsApp <?= e(SITE_PHONE_HUMAN) ?></a>
     </div>
     <div class="nav-wrap">
       <a class="brand" href="/" aria-label="SmartPlanet – a Boutique do Celular, início">
-        <img src="/assets/img/logo.png" alt="SmartPlanet – a Boutique do Celular" width="54" height="54">
+        <img src="/assets/img/logo.png?v=3" alt="SmartPlanet – a Boutique do Celular" width="54" height="54">
         <span>Smart<span>Planet</span></span>
       </a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="menu">Menu</button>
@@ -85,21 +86,30 @@ $robots = $robots ?? 'index,follow';
   </main>
   <footer class="foot">
     <div class="foot-brand">
-      <img src="/assets/img/logo.png" alt="SmartPlanet – a Boutique do Celular" width="92" height="92">
+      <img src="/assets/img/logo.png?v=3" alt="SmartPlanet – a Boutique do Celular" width="92" height="92">
       <p><strong>SmartPlanet</strong><br><?= e(SITE_TAG) ?></p>
     </div>
     <address>
       <?= e(SITE_STREET) ?><br>
       <?= e(SITE_PLACE) ?> · <?= e(SITE_CEP) ?><br>
-      Referência: <?= e(SITE_REF) ?><br>
+      Referência: <?= e(SITE_REF) ?>, onde fica o Grauvi Empório Natural<br>
+      Horário: <?= e(SITE_HOURS) ?><br>
       <a href="<?= e(wa_link()) ?>" rel="noopener noreferrer" title="Chamar no WhatsApp <?= e(SITE_PHONE_HUMAN) ?>"><?= e(SITE_PHONE_HUMAN) ?></a>
     </address>
     <nav aria-label="Rodapé">
       <a href="/a-loja">A loja</a>
       <a href="/acessorios">Acessórios</a>
+      <a href="/peliculas">Películas</a>
+      <a href="/carregadores">Carregadores e cabos</a>
+      <a href="/fones">Fones</a>
+      <a href="/linha-gamer">Linha gamer</a>
+      <a href="/iphone">iPhone</a>
       <a href="/entrega">Entrega</a>
       <a href="/onde-estamos">Onde estamos</a>
       <a href="/contato">Contato</a>
+      <a href="<?= e(SITE_INSTAGRAM) ?>" rel="me noopener noreferrer">Instagram</a>
+      <a href="<?= e(SITE_FACEBOOK) ?>" rel="me noopener noreferrer">Facebook</a>
+      <a href="<?= e(maps_link()) ?>" rel="noopener noreferrer">Mapa</a>
       <a href="/privacidade">Privacidade</a>
     </nav>
     <p class="fine">© <?= date('Y') ?> SmartPlanet. <?= e(SITE_STREET) ?>, <?= e(SITE_PLACE) ?>.</p>

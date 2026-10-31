@@ -46,8 +46,13 @@ final class AuthController
 
     public function logout(): void
     {
-        Csrf::enforce();
-        Auth::logout();
+        try {
+            Auth::logout();
+        } catch (\Throwable $exception) {
+            error_log((string) $exception);
+            Auth::reset();
+            Session::destroy();
+        }
         header('Location: /login', true, 303);
         exit;
     }

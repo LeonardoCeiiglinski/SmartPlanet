@@ -15,8 +15,19 @@ use App\Core\View;
   <div class="panel-body">
     <form method="get" action="/products" class="filters">
       <div class="field">
-        <label for="q">Descrição, código interno ou código de barras</label>
-        <input type="text" id="q" name="q" data-scanner="search" value="<?= View::e($search) ?>" placeholder="Digite ou bipe o código de barras...">
+        <label for="q">Produto</label>
+        <select id="q" name="q" data-scanner="search" data-submit-on-change="1">
+          <option value="">Selecione uma opção...</option>
+          <?php foreach ($choices as $choice): ?>
+            <?php
+              $choiceValue = trim((string) $choice['internal_code']) !== '' ? (string) $choice['internal_code'] : (string) $choice['description'];
+              $choiceLabel = trim((string) $choice['internal_code']) !== '' ? $choice['internal_code'] . ' · ' . $choice['description'] : (string) $choice['description'];
+              if (!(int) $choice['active']) $choiceLabel .= ' · inativo';
+              $picked = $search !== '' && in_array($search, [(string) $choice['internal_code'], (string) ($choice['barcode'] ?? ''), (string) $choice['description'], $choiceValue], true);
+            ?>
+            <option value="<?= View::e($choiceValue) ?>" data-code="<?= View::e($choice['internal_code']) ?>" data-barcode="<?= View::e($choice['barcode'] ?? '') ?>"<?= $picked ? ' selected' : '' ?>><?= View::e($choiceLabel) ?></option>
+          <?php endforeach; ?>
+        </select>
       </div>
       <button type="submit">Pesquisar</button>
       <?php if ($search !== ''): ?><a class="button" href="/products">Limpar</a><?php endif; ?>

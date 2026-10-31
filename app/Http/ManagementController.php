@@ -10,6 +10,7 @@ use App\Core\Database;
 use App\Core\Session;
 use App\Core\View;
 use App\Domain\Management\ManagementService;
+use App\Domain\Management\QuoteDocument;
 
 final class ManagementController
 {
@@ -28,7 +29,7 @@ final class ManagementController
              WHERE q.company_id=:company AND q.branch_id=:branch ORDER BY q.id DESC LIMIT 200'
         );
         $quotes->execute(['company' => $u['company_id'], 'branch' => $u['branch_id']]);
-        $products = $pdo->prepare('SELECT id, description, sale_price FROM products WHERE company_id=:company AND active=1 ORDER BY description LIMIT 500');
+        $products = $pdo->prepare('SELECT id, internal_code, description, sale_price FROM products WHERE company_id=:company AND active=1 ORDER BY description LIMIT 500');
         $products->execute(['company' => $u['company_id']]);
         $customers = $pdo->prepare('SELECT id, name FROM customers WHERE company_id=:company AND active=1 ORDER BY name LIMIT 500');
         $customers->execute(['company' => $u['company_id']]);
@@ -53,6 +54,50 @@ final class ManagementController
             'methods' => $methods->fetchAll(),
             'detail' => $detail,
         ]);
+    }
+
+    public function quotePdf(): void
+    {
+        Auth::authorize('sales.view');
+        $u = Auth::user();
+        $pdo = Database::connection();
+        $q = $pdo->prepare(
+            'SELECT q.*, c.name customer_name, c.document customer_document, c.phone customer_phone, c.email customer_email, c.address_json customer_address
+             FROM quotes q
+             LEFT JOIN customers c ON c.id = q.customer_id
+             WHERE q.id=:id AND q.company_id=:company AND q.branch_id=:branch'
+        );
+        $q->execute(['id' => (int) ($_GET['id'] ?? 0), 'company' => $u['company_id'], 'branch' => $u['branch_id']]);
+        $quote = $q->fetch();
+        if (!$quote) {
+            View::redirect('/quotes', 'erro', 'Orçamento não encontrado.');
+        }
+        $items = $pdo->prepare('SELECT description, quantity, unit_price, discount_amount, subtotal FROM quote_items WHERE quote_id=:id ORDER BY id');
+        $items->execute(['id' => $quote['id']]);
+        $company = $pdo->prepare('SELECT legal_name, trade_name, document, email, phone FROM companies WHERE id=:id');
+        $company->execute(['id' => $u['company_id']]);
+        $branch = $pdo->prepare('SELECT address_json FROM branches WHERE id=:id AND company_id=:company');
+        $branch->execute(['id' => $u['branch_id'], 'company' => $u['company_id']]);
+        $pdf = QuoteDocument::render(
+            $quote,
+            $items->fetchAll(),
+            $company->fetch() ?: [],
+            [
+                'name' => (string) ($quote['customer_name'] ?? ''),
+                'document' => (string) ($quote['customer_document'] ?? ''),
+                'phone' => (string) ($quote['customer_phone'] ?? ''),
+                'email' => (string) ($quote['customer_email'] ?? ''),
+            ],
+            QuoteDocument::addressLines($branch->fetchColumn()),
+            QuoteDocument::addressLines($quote['customer_address'] ?? null)
+        );
+        $safe = preg_replace('/[^A-Za-z0-9._-]+/', '-', (string) $quote['quote_number']) ?: 'orcamento';
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="orcamento-' . $safe . '.pdf"');
+        header('Content-Length: ' . strlen($pdf));
+        header('Cache-Control: private, no-store');
+        echo $pdf;
+        exit;
     }
 
     public function quoteCreate(): void

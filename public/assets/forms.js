@@ -44,18 +44,55 @@
     return '';
   }
 
+  function phoneDigits(value) {
+    var raw = String(value || '');
+    var plus = raw.search(/\+55/);
+    var d;
+    if (plus >= 0) d = digits(raw.slice(0, plus)) + digits(raw.slice(plus + 3));
+    else {
+      d = digits(raw);
+      if (d.startsWith('55') && d.length > 11) d = d.slice(2);
+    }
+    return d.slice(0, 11);
+  }
+
   function formatPhone(value) {
-    var d = digits(value);
-    if (d.startsWith('55') && d.length > 11) d = d.slice(2);
-    else if (d.startsWith('55') && d.length >= 12) d = d.slice(2);
-    d = d.slice(0, 11);
-    if (!d) return '';
+    var raw = String(value || '');
+    var hasPrefix = raw.search(/\+55/) >= 0;
+    var d = phoneDigits(value);
+    if (!d) return hasPrefix ? '+55 ' : '';
     var out = '+55';
     if (d.length <= 2) return out + ' (' + d;
     out += ' (' + d.slice(0, 2) + ') ';
-    if (d.length <= 6) return out + d.slice(2);
-    if (d.length <= 10) return out + d.slice(2, 6) + '-' + d.slice(6);
-    return out + d.slice(2, 3) + ' ' + d.slice(3, 7) + '-' + d.slice(7, 11);
+    var rest = d.slice(2);
+    if (rest.length <= 4) return out + rest;
+    if (rest.charAt(0) === '9') {
+      if (rest.length <= 5) return out + rest.charAt(0) + ' ' + rest.slice(1);
+      return out + rest.charAt(0) + ' ' + rest.slice(1, 5) + '-' + rest.slice(5);
+    }
+    return out + rest.slice(0, 4) + '-' + rest.slice(4);
+  }
+
+  function phoneDigitsBeforeCaret(raw, cursor) {
+    return phoneDigits(String(raw || '').slice(0, cursor)).length;
+  }
+
+  function caretAfterPhoneDigits(formatted, count) {
+    if (!count) {
+      var at = formatted.indexOf('+55');
+      return at >= 0 ? Math.min(formatted.length, at + 4) : 0;
+    }
+    var plus = formatted.indexOf('+55');
+    var start = plus >= 0 ? plus + 3 : 0;
+    var seen = 0;
+    for (var i = start; i < formatted.length; i++) {
+      var ch = formatted.charAt(i);
+      if (ch >= '0' && ch <= '9') {
+        seen++;
+        if (seen === count) return i + 1;
+      }
+    }
+    return formatted.length;
   }
 
   function formatCpf(value) {
@@ -239,22 +276,235 @@
     return 'Ex.: Preencha este campo.';
   }
 
+  function fold(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+
   function enhanceSelect(el) {
-    if (el.tagName !== 'SELECT' || el.multiple || el.dataset.spSelect === '1') return;
-    var first = el.options[0];
-    if (!first) return;
-    var text = (first.textContent || '').trim();
-    if (first.value === '' && (/^(selecione|—|-|–)?$/i.test(text) || text === 'Selecione')) {
-      first.textContent = 'Selecione uma opção...';
+    if (el.tagName !== 'SELECT' || el.multiple || el.dataset.spCombo === '1') return;
+    if (el.dataset.cfg) return;
+    if (!el.options.length) return;
+    el.dataset.spCombo = '1';
+
+    var box = document.createElement('div');
+    box.className = 'sp-combo';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'sp-combo-input';
+    input.autocomplete = 'off';
+    input.setAttribute('autocapitalize', 'off');
+    input.setAttribute('spellcheck', 'false');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.placeholder = 'Digite para buscar...';
+    if (el.required) {
+      input.required = true;
+      el.required = false;
     }
-    el.dataset.spSelect = '1';
+    if (el.disabled) input.disabled = true;
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'sp-combo-toggle';
+    toggle.setAttribute('aria-label', 'Mostrar cadastrados');
+    toggle.textContent = '▾';
+    if (el.disabled) toggle.disabled = true;
+    var list = document.createElement('ul');
+    list.className = 'sp-combo-list';
+    list.hidden = true;
+    list.setAttribute('role', 'listbox');
+    el.parentNode.insertBefore(box, el);
+    box.appendChild(input);
+    box.appendChild(toggle);
+    box.appendChild(el);
+    box.appendChild(list);
+    el.classList.add('sp-combo-native');
+    el.tabIndex = -1;
+    if (el.id && !input.id) input.id = el.id + '-busca';
+    var label = el.id ? document.querySelector('label[for="' + ((window.CSS && CSS.escape) ? CSS.escape(el.id) : el.id) + '"]') : null;
+    if (label) label.htmlFor = input.id;
+
+    var open = false;
+    var active = 0;
+    var shown = [];
+    var valueDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+
+    function options() {
+      return Array.prototype.slice.call(el.options);
+    }
+
+    function paintInput() {
+      var opt = el.options[el.selectedIndex];
+      input.value = opt && opt.value !== '' ? (opt.textContent || '').trim() : '';
+    }
+
+    function place() {
+      var rect = input.getBoundingClientRect();
+      var below = window.innerHeight - rect.bottom;
+      list.style.position = 'fixed';
+      list.style.left = Math.max(8, rect.left) + 'px';
+      list.style.width = rect.width + 'px';
+      list.style.zIndex = '80';
+      if (below < 200 && rect.top > below) {
+        list.style.top = 'auto';
+        list.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        list.style.maxHeight = Math.max(120, rect.top - 12) + 'px';
+      } else {
+        list.style.bottom = 'auto';
+        list.style.top = (rect.bottom + 4) + 'px';
+        list.style.maxHeight = Math.max(120, Math.min(240, below - 12)) + 'px';
+      }
+    }
+
+    function render(query) {
+      var needle = fold(query);
+      shown = options().filter(function (opt) {
+        if (!needle) return true;
+        return fold(opt.textContent).indexOf(needle) >= 0;
+      });
+      list.textContent = '';
+      if (!shown.length) {
+        var empty = document.createElement('li');
+        empty.className = 'sp-combo-empty';
+        empty.textContent = 'Nenhum cadastro encontrado.';
+        list.appendChild(empty);
+        active = 0;
+        return;
+      }
+      if (active >= shown.length) active = 0;
+      shown.forEach(function (opt, index) {
+        var item = document.createElement('li');
+        item.setAttribute('role', 'option');
+        item.textContent = (opt.textContent || '').trim();
+        if (index === active) item.className = 'is-active';
+        if (opt.value === el.value) item.setAttribute('aria-selected', 'true');
+        item.addEventListener('mousedown', function (event) {
+          event.preventDefault();
+          commit(opt);
+        });
+        list.appendChild(item);
+      });
+    }
+
+    function openList(query) {
+      if (input.disabled) return;
+      open = true;
+      input.setAttribute('aria-expanded', 'true');
+      list.hidden = false;
+      render(query);
+      place();
+    }
+
+    function closeList() {
+      open = false;
+      input.setAttribute('aria-expanded', 'false');
+      list.hidden = true;
+    }
+
+    function commit(opt) {
+      if (!opt) return;
+      var changed = el.value !== opt.value;
+      valueDesc.set.call(el, opt.value);
+      paintInput();
+      closeList();
+      if (changed) el.dispatchEvent(new Event('change', { bubbles: true }));
+      input.setCustomValidity('');
+    }
+
+    function exact(query) {
+      var needle = fold(query.trim());
+      if (!needle) return options().filter(function (opt) { return opt.value === ''; })[0] || null;
+      return options().filter(function (opt) { return fold((opt.textContent || '').trim()) === needle; })[0] || null;
+    }
+
+    function settle() {
+      var match = exact(input.value);
+      if (match) commit(match);
+      else paintInput();
+      closeList();
+    }
+
+    Object.defineProperty(el, 'value', {
+      configurable: true,
+      get: function () { return valueDesc.get.call(el); },
+      set: function (next) {
+        valueDesc.set.call(el, next);
+        paintInput();
+      }
+    });
+
+    input.addEventListener('focus', function () {
+      active = 0;
+      openList('');
+      input.select();
+    });
+    input.addEventListener('input', function () {
+      active = 0;
+      openList(input.value);
+    });
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (!open) openList(input.value);
+        else if (shown.length) {
+          active = (active + 1) % shown.length;
+          render(input.value);
+          place();
+        }
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (!open) openList(input.value);
+        else if (shown.length) {
+          active = (active - 1 + shown.length) % shown.length;
+          render(input.value);
+          place();
+        }
+      } else if (event.key === 'Enter') {
+        if (!open) return;
+        event.preventDefault();
+        if (shown[active]) commit(shown[active]);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        paintInput();
+        closeList();
+      }
+    });
+    input.addEventListener('blur', function () {
+      setTimeout(function () {
+        if (document.activeElement === input) return;
+        settle();
+      }, 140);
+    });
+    toggle.addEventListener('mousedown', function (event) {
+      event.preventDefault();
+    });
+    toggle.addEventListener('click', function () {
+      if (open) {
+        closeList();
+        return;
+      }
+      input.focus();
+      active = 0;
+      openList('');
+    });
+    list.addEventListener('mousedown', function (event) {
+      event.preventDefault();
+    });
+    window.addEventListener('resize', function () { if (open && input.isConnected) place(); });
+    document.addEventListener('scroll', function () {
+      if (!input.isConnected) { closeList(); return; }
+      if (open) place();
+    }, true);
+    input._spSettle = settle;
+
+    paintInput();
   }
 
   function enhanceField(el) {
     if (!(el instanceof HTMLElement)) return;
     if (el.dataset.spReady === '1') return;
     if (el.tagName === 'SELECT') {
-      enhanceSelect(el);
+      if (el.dataset.plain !== '1') enhanceSelect(el);
       el.dataset.spReady = '1';
       return;
     }
@@ -264,6 +514,7 @@
       el.dataset.spReady = '1';
       return;
     }
+    if (el.type !== 'password' && el.type !== 'email') el.setAttribute('autocomplete', 'off');
     var ph = inferPlaceholder(el);
     if (ph && !el.placeholder) el.placeholder = ph;
     if (el.type === 'date' || el.type === 'time' || el.type === 'datetime-local') {
@@ -296,8 +547,14 @@
       }
       if (isPhonePrefixOnly(el.value)) {
         el.value = '+55 ';
+        try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {}
         return;
       }
+      var typed = phoneDigitsBeforeCaret(el.value, el.selectionStart);
+      applyMask(el, mask);
+      var pos = caretAfterPhoneDigits(el.value, typed);
+      try { el.setSelectionRange(pos, pos); } catch (e) {}
+      return;
     }
     applyMask(el, mask);
   }
@@ -305,7 +562,11 @@
   function onFocus(event) {
     var el = event.target;
     if (!(el instanceof HTMLInputElement)) return;
-    if ((el.dataset.mask || inferMask(el)) === 'phone' && !el.value) el.value = '+55 ';
+    if ((el.dataset.mask || inferMask(el)) === 'phone' && !el.value) {
+      el.value = '+55 ';
+      var end = el.value.length;
+      try { el.setSelectionRange(end, end); } catch (e) {}
+    }
   }
 
   function onBlur(event) {
@@ -498,6 +759,9 @@
   function onSubmit(event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
+    form.querySelectorAll('.sp-combo-input').forEach(function (field) {
+      if (typeof field._spSettle === 'function') field._spSettle();
+    });
     if (form.dataset.spConfirmed === '1') {
       delete form.dataset.spConfirmed;
       prepareSubmit(form);
@@ -525,6 +789,12 @@
   document.addEventListener('focusin', onFocus, true);
   document.addEventListener('focusout', onBlur, true);
   document.addEventListener('submit', onSubmit, true);
+  document.addEventListener('change', function (event) {
+    var el = event.target;
+    if (!(el instanceof HTMLSelectElement) || el.dataset.submitOnChange !== '1' || !el.form) return;
+    if (typeof el.form.requestSubmit === 'function') el.form.requestSubmit();
+    else el.form.submit();
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { enhance(document); });

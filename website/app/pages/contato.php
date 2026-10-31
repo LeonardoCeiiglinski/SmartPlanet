@@ -41,6 +41,11 @@
       <a href="<?= e(SITE_FACEBOOK) ?>" rel="me noopener noreferrer" title="Facebook da SmartPlanet">Smart Planet</a>
     </li>
     <li>
+      <h2>Horário</h2>
+      <p><?= e(SITE_HOURS) ?> O número é o mesmo WhatsApp da loja.</p>
+      <a href="<?= e(wa_link('Oi, vim pelo site da SmartPlanet. Qual é o horário de hoje?')) ?>" rel="noopener noreferrer" title="Perguntar o horário no WhatsApp">Perguntar o horário</a>
+    </li>
+    <li>
       <h2>Loja</h2>
       <p><?= e(SITE_STREET) ?>, <?= e(SITE_PLACE) ?>, CEP <?= e(SITE_CEP) ?>.</p>
       <a href="/onde-estamos">Ver como chegar</a>

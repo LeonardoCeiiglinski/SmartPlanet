@@ -22,9 +22,9 @@ final class ReportController
         $params = ['company' => $u['company_id'], 'branch' => $u['branch_id'], 'from' => $start, 'to' => $end];
 
         $sales = $this->rows($pdo,
-            "SELECT DATE(completed_at) day, COUNT(*) qty, SUM(total) total
+            "SELECT DATE(completed_at) AS \"day\", COUNT(*) qty, SUM(total) total
              FROM sales WHERE company_id=:company AND branch_id=:branch AND status='completed'
-             AND completed_at BETWEEN :from AND :to GROUP BY DATE(completed_at) ORDER BY day",
+             AND completed_at BETWEEN :from AND :to GROUP BY DATE(completed_at) ORDER BY \"day\"",
             $params
         );
         $products = $this->rows($pdo,

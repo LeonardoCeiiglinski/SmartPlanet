@@ -15,8 +15,8 @@
       Referência: <?= e(SITE_REF) ?><br>
       <a href="<?= e(wa_link('Oi, vim pelo site da SmartPlanet. Estou a caminho da loja.')) ?>" rel="noopener noreferrer" title="Chamar no WhatsApp">WhatsApp <?= e(SITE_PHONE_HUMAN) ?></a>
     </address>
-    <p>Use o mercado Direto do Campo, no número 34, como ponto de referência. A SmartPlanet fica nesse endereço.</p>
-    <p>Antes de sair de casa, pergunte o horário pelo WhatsApp. Ele ainda não está publicado nesta página.</p>
+    <p>Use o mercado Direto do Campo, no número 34, como ponto de referência. O Grauvi Empório Natural fica nesse mesmo endereço. A SmartPlanet fica aí.</p>
+    <p>Horário: <?= e(SITE_HOURS) ?></p>
     <p class="actions">
       <a class="btn gold" href="<?= e(maps_link()) ?>" rel="noopener noreferrer" title="Rota até a Av. Josué Di Bernardi, 34, São José, SC">Ver como chegar</a>
       <a class="text-link" href="/contato">Avisar que estou a caminho</a>

@@ -1,6 +1,58 @@
-<?php use App\Core\Auth; use App\Core\Csrf; use App\Core\View; ?>
+<?php use App\Core\Auth; use App\Core\Csrf; use App\Core\Security; use App\Core\View; use App\Domain\Sales\ReceiptSlip;
+$receiptPayload = null;
+if ($receipt) {
+    $receiptPayload = [
+        'tradeName' => (string) ($company['trade_name'] ?? 'SmartPlanet'),
+        'phone' => (string) ($company['phone'] ?? ''),
+        'address' => $receiptAddress ?? [],
+        'saleNumber' => (string) $receipt['sale_number'],
+        'completedAt' => (string) ($receipt['completed_at'] ?: $receipt['created_at']),
+        'operator' => (string) ($receipt['operator_name'] ?? ''),
+        'customer' => (string) ($receipt['customer_name'] ?? ''),
+        'status' => (string) $receipt['status'],
+        'discount' => (float) $receipt['discount_amount'],
+        'total' => (float) $receipt['total'],
+        'items' => array_map(static fn (array $i): array => [
+            'description' => (string) $i['description'],
+            'quantity' => (float) $i['quantity'],
+            'unitPrice' => (float) $i['unit_price'],
+            'subtotal' => (float) $i['subtotal'],
+        ], $receipt['items']),
+        'payments' => array_map(static fn (array $p): array => [
+            'name' => (string) $p['method_name'],
+            'amount' => (float) $p['amount'],
+            'installments' => (int) $p['installments'],
+        ], $receipt['payments']),
+    ];
+}
+$vReceipt = (int) (@filemtime(dirname(__DIR__, 3) . '/public/assets/receipt.js') ?: time());
+$vReceipt58 = (int) (@filemtime(dirname(__DIR__, 3) . '/public/assets/receipt-58.js') ?: time());
+?>
 <div class="page-header"><h1>Vendas</h1><a class="button primary" href="/pos">Nova venda</a></div>
-<?php if($receipt): ?><section class="receipt panel"><div class="panel-body"><p class="brand-tag">SmartPlanet · a Boutique do Celular</p><h2>RECIBO NÃO FISCAL</h2><p><?= View::e($receipt['sale_number']) ?> · <?= View::e($receipt['completed_at']) ?><br>Operador: <?= View::e($receipt['operator_name']) ?></p><table><tbody><?php foreach($receipt['items'] as $i): ?><tr><td><?= View::e($i['description']) ?></td><td class="num"><?= number_format((float)$i['quantity'],3,',','.') ?> × R$ <?= number_format((float)$i['unit_price'],2,',','.') ?></td><td class="num">R$ <?= number_format((float)$i['subtotal'],2,',','.') ?></td></tr><?php endforeach ?></tbody></table><p class="num"><strong>Total R$ <?= number_format((float)$receipt['total'],2,',','.') ?></strong></p><p><?php foreach($receipt['payments'] as $p): ?><?= View::e($p['method_name']) ?>: R$ <?= number_format((float)$p['amount'],2,',','.') ?><br><?php endforeach ?></p><button type="button" data-print>Imprimir</button></div></section><?php endif ?>
+<?php if ($receiptPayload): ?>
+<section class="receipt" aria-label="Recibo não fiscal">
+  <div class="receipt-vias">
+    <?php foreach (ReceiptSlip::vias($receiptPayload) as $via): ?>
+    <div class="receipt-col">
+      <label class="receipt-pick"><input type="checkbox" data-receipt-pick value="<?= View::e($via['id']) ?>" checked> <?= View::e($via['title']) ?></label>
+      <article class="receipt-slip" data-via="<?= View::e($via['id']) ?>">
+        <div class="receipt-watermark" aria-hidden="true"><?php for ($w = 0; $w < 3; $w++): ?><span>SmartPlanet</span><span><?= View::e(ReceiptSlip::DOMAIN) ?></span><?php endfor ?></div>
+        <div class="receipt-text"><?php foreach ($via['lines'] as $line): ?><div class="receipt-line<?= !empty($line['bold']) ? ' is-bold' : '' ?><?= !empty($line['via']) ? ' is-via' : '' ?>"><?= View::e($line['text']) ?></div><?php endforeach ?></div>
+      </article>
+    </div>
+    <?php endforeach ?>
+  </div>
+  <div class="receipt-actions">
+    <button type="button" class="primary" data-receipt-usb>Imprimir</button>
+    <button type="button" data-receipt-window>Pelo Windows</button>
+  </div>
+  <p class="receipt-status" role="status"></p>
+  <p class="receipt-note">Marque a via do cliente, a da loja ou as duas. Cada cupom sai com o nome da via. Papel 58 mm.</p>
+  <script type="application/json" id="receipt-payload"><?= json_encode($receiptPayload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_THROW_ON_ERROR) ?></script>
+  <script<?= Security::nonceAttribute() ?> src="/assets/receipt-58.js?v=<?= $vReceipt58 ?>"></script>
+  <script<?= Security::nonceAttribute() ?> src="/assets/receipt.js?v=<?= $vReceipt ?>"></script>
+</section>
+<?php endif ?>
 <div class="panel"><div class="panel-body table-wrap"><table><thead><tr><th>Número</th><th>Data</th><th>Operador</th><th>Cliente</th><th>Status</th><th class="num">Total</th><th>Ações</th></tr></thead><tbody><?php foreach($sales as $s): ?><tr><td><a href="/sales?receipt=<?= (int)$s['id'] ?>"><?= View::e($s['sale_number']) ?></a></td><td><?= View::e($s['created_at']) ?></td><td><?= View::e($s['operator_name']) ?></td><td><?= View::e($s['customer_name']??'Consumidor final') ?></td><td><?= View::e($s['status']) ?></td><td class="num">R$ <?= number_format((float)$s['total'],2,',','.') ?></td><td><?php if($s['status']==='completed'&&Auth::can('sales.cancel')): ?><form method="post" action="/sales/cancel" class="actions" data-confirm-twice="cancelar" data-confirm-item="<?= View::e($s['sale_number']) ?>"><?= Csrf::field() ?><input type="hidden" name="sale_id" value="<?= (int)$s['id'] ?>"><input name="reason" minlength="5" placeholder="Ex.: Cliente desistiu da compra" required><button class="danger small">Cancelar/estornar</button></form><?php endif ?></td></tr><?php endforeach ?></tbody></table></div></div>
 <?php if($receipt && $receipt['status']==='completed' && Auth::can('sales.return')): ?>
 <form method="post" action="/sales/return" class="panel" data-confirm-twice="devolver" data-confirm-item="<?= View::e($receipt['sale_number']) ?>"><?= Csrf::field() ?>

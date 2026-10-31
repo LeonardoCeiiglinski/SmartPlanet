@@ -18,6 +18,13 @@
   </article>
 </section>
 
+<section class="prose visit-note" data-reveal="fade">
+  <h2>São José e as cidades ao redor</h2>
+  <p>A SmartPlanet fica no bairro Campinas, em São José/SC. Campinas aqui não é a cidade de Campinas, em São Paulo. Quem está em Florianópolis, Palhoça ou Biguaçu também pode perguntar a entrega. A mensagem precisa dizer o bairro e a cidade, por exemplo Kobrasol em São José ou um bairro de Palhoça.</p>
+  <p>O site não lista todos os bairros atendidos e não transforma isso numa lista. Cada endereço é uma resposta. A loja diz se a entrega sai, e só nessa conversa informa a taxa, se houver, e o prazo. Nenhum dos dois está publicado aqui.</p>
+  <p>Se preferir não esperar a entrega, a retirada continua sendo na <?= e(SITE_STREET) ?>. Use o Direto do Campo como referência. O Grauvi Empório Natural fica nesse mesmo endereço.</p>
+</section>
+
 <section class="answers" data-reveal="fade" aria-labelledby="perguntas">
   <h2 id="perguntas">Perguntas sobre a entrega</h2>
   <dl>
